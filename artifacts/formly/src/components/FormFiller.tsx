@@ -1,9 +1,10 @@
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Star, Check, GripVertical, Globe } from "lucide-react";
+import { ChevronDown, Star, Check, GripVertical } from "lucide-react";
 import { useListQuestions, useSubmitResponse, getListQuestionsQueryKey } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { type Lang, t } from "@/lib/i18n";
+import { useLang } from "@/contexts/LangContext";
+import { t } from "@/lib/i18n";
 
 interface LogicRule {
   condition: string;
@@ -57,7 +58,6 @@ function applyLogic(question: Question, answer: string, questions: Question[]): 
   return null;
 }
 
-// Ranking input with drag-and-drop
 function RankingInput({ options, value, onChange, themeColor }: {
   options: string[];
   value: string;
@@ -98,7 +98,7 @@ function RankingInput({ options, value, onChange, themeColor }: {
           onDragEnd={() => { setDragging(null); setOver(null); }}
           className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all cursor-grab active:cursor-grabbing ${
             dragging === idx ? "opacity-40" : ""
-          } ${over === idx && dragging !== idx ? "border-current scale-105" : "border-border"}`}
+          } ${over === idx && dragging !== idx ? "scale-105" : "border-border"}`}
           style={over === idx && dragging !== idx ? { borderColor: themeColor, backgroundColor: themeColor + "10" } : {}}
           data-testid={`rank-item-${idx}`}
         >
@@ -114,7 +114,6 @@ function RankingInput({ options, value, onChange, themeColor }: {
   );
 }
 
-// Opinion scale (1-10)
 function OpinionScaleInput({ options, value, onChange, themeColor }: {
   options: string[] | null | undefined;
   value: string;
@@ -133,8 +132,6 @@ function OpinionScaleInput({ options, value, onChange, themeColor }: {
       <div className="flex gap-1.5 flex-wrap">
         {nums.map((n) => {
           const isSelected = selected === n;
-          const pct = (n - min) / (max - min);
-          // Interpolate hue from muted to theme
           return (
             <button
               key={n}
@@ -165,14 +162,13 @@ function QuestionInput({
   value,
   onChange,
   themeColor,
-  lang,
 }: {
   question: Question;
   value: string;
   onChange: (v: string) => void;
   themeColor: string;
-  lang: Lang;
 }) {
+  const { lang } = useLang();
   const baseInput = "w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground text-base focus:outline-none focus:border-current transition-colors";
 
   switch (question.type) {
@@ -191,7 +187,6 @@ function QuestionInput({
               : t(lang, "yourAnswer")
           }
           className={baseInput}
-          style={{ outlineColor: themeColor }}
           data-testid="input-answer"
           autoFocus
         />
@@ -225,7 +220,7 @@ function QuestionInput({
             >
               <div className="flex items-center gap-3">
                 <div
-                  className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors"
+                  className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0"
                   style={value === opt ? { borderColor: themeColor, backgroundColor: themeColor } : { borderColor: "hsl(var(--border))" }}
                 >
                   {value === opt && <div className="w-2 h-2 rounded-full bg-white" />}
@@ -379,31 +374,11 @@ function QuestionInput({
 }
 
 // ─── Welcome Screen ───────────────────────────────────────────────────────────
-function WelcomeScreen({
-  form,
-  lang,
-  onStart,
-  onLangToggle,
-}: {
-  form: Form;
-  lang: Lang;
-  onStart: () => void;
-  onLangToggle: () => void;
-}) {
+function WelcomeScreen({ form, onStart }: { form: Form; onStart: () => void }) {
+  const { lang } = useLang();
+
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Language toggle */}
-      <div className="flex justify-end px-6 py-4">
-        <button
-          onClick={onLangToggle}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-border text-xs font-medium text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
-          data-testid="button-lang-toggle"
-        >
-          <Globe className="w-3.5 h-3.5" />
-          {lang === "en" ? "Indonesia" : "English"}
-        </button>
-      </div>
-
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -411,12 +386,11 @@ function WelcomeScreen({
           transition={{ duration: 0.5, ease: "easeOut" }}
           className="w-full max-w-xl text-center"
         >
-          {/* Color dot */}
           <div
             className="w-14 h-14 rounded-2xl mx-auto mb-8 flex items-center justify-center shadow-md"
             style={{ backgroundColor: form.themeColor }}
           >
-            <svg viewBox="0 0 24 24" className="w-7 h-7 text-white fill-white">
+            <svg viewBox="0 0 24 24" className="w-7 h-7 fill-white">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/>
             </svg>
           </div>
@@ -431,7 +405,7 @@ function WelcomeScreen({
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.97 }}
             onClick={onStart}
-            className="px-10 py-4 rounded-2xl text-lg font-semibold text-white shadow-lg hover:shadow-xl transition-all"
+            className="px-10 py-4 rounded-2xl text-lg font-semibold text-white shadow-lg hover:shadow-xl transition-shadow"
             style={{ backgroundColor: form.themeColor }}
             data-testid="button-start"
           >
@@ -449,6 +423,8 @@ function WelcomeScreen({
 
 // ─── Main FormFiller ─────────────────────────────────────────────────────────
 export default function FormFiller({ form, previewMode }: FormFillerProps) {
+  const { lang } = useLang();
+
   const { data: questionsData } = useListQuestions(form.id, {
     query: { queryKey: getListQuestionsQueryKey(form.id) }
   });
@@ -456,7 +432,6 @@ export default function FormFiller({ form, previewMode }: FormFillerProps) {
   const questions = (form.questions || questionsData || []) as Question[];
   const sortedQuestions = [...questions].sort((a, b) => a.order - b.order);
 
-  const [lang, setLang] = useState<Lang>("en");
   const [started, setStarted] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -512,21 +487,10 @@ export default function FormFiller({ form, previewMode }: FormFillerProps) {
     );
   };
 
-  const toggleLang = () => setLang(l => l === "en" ? "id" : "en");
-
-  // Welcome screen
   if (!started) {
-    return (
-      <WelcomeScreen
-        form={form}
-        lang={lang}
-        onStart={() => setStarted(true)}
-        onLangToggle={toggleLang}
-      />
-    );
+    return <WelcomeScreen form={form} onStart={() => setStarted(true)} />;
   }
 
-  // Thank-you screen
   if (submitted) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center">
@@ -569,20 +533,8 @@ export default function FormFiller({ form, previewMode }: FormFillerProps) {
         />
       </div>
 
-      {/* Language toggle */}
-      <div className="flex justify-end px-6 py-3">
-        <button
-          onClick={toggleLang}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-border text-xs text-muted-foreground hover:text-foreground transition-colors"
-          data-testid="button-lang-toggle-filler"
-        >
-          <Globe className="w-3 h-3" />
-          {lang === "en" ? "Indonesia" : "English"}
-        </button>
-      </div>
-
       {/* Question */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-8">
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
         <div className="w-full max-w-xl">
           <div className="text-xs text-muted-foreground mb-6 text-center">
             {t(lang, "question")} {currentIndex + 1} {t(lang, "of")} {sortedQuestions.length}
@@ -615,7 +567,6 @@ export default function FormFiller({ form, previewMode }: FormFillerProps) {
                   value={answers[currentQuestion.id] ?? ""}
                   onChange={(v) => setAnswers(prev => ({ ...prev, [currentQuestion.id]: v }))}
                   themeColor={form.themeColor}
-                  lang={lang}
                 />
               )}
             </motion.div>

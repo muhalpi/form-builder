@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
-import { ArrowLeft, FileText, BarChart2, Settings, Eye, MessageSquare } from "lucide-react";
+import { ArrowLeft, FileText, BarChart2, Settings, Eye, MessageSquare, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLang } from "@/contexts/LangContext";
 
 interface FormLayoutProps {
   formId: string;
@@ -10,6 +11,7 @@ interface FormLayoutProps {
 
 export function FormLayout({ formId, formTitle, children }: FormLayoutProps) {
   const [location] = useLocation();
+  const { lang, toggleLang } = useLang();
 
   const tabs = [
     { href: `/forms/${formId}/build`, icon: FileText, label: "Build" },
@@ -32,7 +34,19 @@ export function FormLayout({ formId, formTitle, children }: FormLayoutProps) {
         <span className="text-sm font-medium text-foreground truncate max-w-xs">
           {formTitle || "Form"}
         </span>
+
         <div className="flex-1" />
+
+        {/* Language toggle */}
+        <button
+          onClick={toggleLang}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted hover:text-foreground transition-colors"
+          data-testid="button-lang-toggle"
+        >
+          <Globe className="w-3.5 h-3.5" />
+          {lang === "en" ? "Indonesia" : "English"}
+        </button>
+
         <Link href={`/forms/${formId}/preview`}>
           <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-border rounded-md hover:bg-muted transition-colors" data-testid="button-preview">
             <Eye className="w-3.5 h-3.5" />

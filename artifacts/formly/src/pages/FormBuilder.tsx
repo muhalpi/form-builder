@@ -32,8 +32,8 @@ const QUESTION_CATEGORIES: { label: string; types: QuestionTypeDef[] }[] = [
   {
     label: "Text",
     types: [
-      { type: "short_text", label: "Short Text", icon: Type, description: "Single line" },
       { type: "long_text", label: "Long Text", icon: AlignLeft, description: "Multi-line" },
+      { type: "short_text", label: "Short Text", icon: Type, description: "Single line" },
     ],
   },
   {
@@ -42,24 +42,29 @@ const QUESTION_CATEGORIES: { label: string; types: QuestionTypeDef[] }[] = [
       { type: "multiple_choice", label: "Multiple Choice", icon: List, description: "Pick one" },
       { type: "checkbox", label: "Checkbox", icon: CheckSquare, description: "Pick many" },
       { type: "dropdown", label: "Dropdown", icon: DropdownIcon, description: "Select from list" },
+      { type: "yes_no", label: "Yes / No", icon: ToggleLeft, description: "Binary choice" },
+    ],
+  },
+  {
+    label: "Scale & Ranking",
+    types: [
+      { type: "opinion_scale", label: "Opinion Scale", icon: BarChart2, description: "Numeric scale" },
+      { type: "rating", label: "Star Rating", icon: Star, description: "Stars 1–5" },
       { type: "ranking", label: "Ranking", icon: ArrowUpDown, description: "Drag to rank" },
     ],
   },
   {
-    label: "Scale & Rating",
-    types: [
-      { type: "rating", label: "Star Rating", icon: Star, description: "Stars 1–5" },
-      { type: "opinion_scale", label: "Opinion Scale", icon: BarChart2, description: "Numeric scale" },
-    ],
-  },
-  {
-    label: "Contact & Other",
+    label: "Contact Info",
     types: [
       { type: "email", label: "Email", icon: Mail, description: "Email address" },
       { type: "phone", label: "Phone", icon: Phone, description: "Phone number" },
+    ],
+  },
+  {
+    label: "Other",
+    types: [
       { type: "number", label: "Number", icon: Hash, description: "Numeric input" },
       { type: "date", label: "Date", icon: Calendar, description: "Date picker" },
-      { type: "yes_no", label: "Yes / No", icon: ToggleLeft, description: "Binary choice" },
     ],
   },
 ];

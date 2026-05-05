@@ -1,9 +1,9 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Plus, FileText } from "lucide-react";
+import { LayoutDashboard, Plus, FileText, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useCreateForm } from "@workspace/api-client-react";
+import { useCreateForm, getListFormsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { getListFormsQueryKey } from "@workspace/api-client-react";
+import { useLang } from "@/contexts/LangContext";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -13,6 +13,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [location, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const createForm = useCreateForm();
+  const { lang, toggleLang } = useLang();
 
   const handleNewForm = () => {
     createForm.mutate(
@@ -34,6 +35,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     <div className="flex h-screen bg-background">
       {/* Sidebar */}
       <aside className="w-56 flex-shrink-0 border-r border-border bg-sidebar flex flex-col">
+        {/* Logo */}
         <div className="px-5 py-5 border-b border-sidebar-border">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
@@ -43,6 +45,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           </div>
         </div>
 
+        {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1">
           {nav.map(({ href, icon: Icon, label }) => (
             <Link key={href} href={href}>
@@ -62,7 +65,19 @@ export function AppLayout({ children }: AppLayoutProps) {
           ))}
         </nav>
 
-        <div className="px-3 py-4 border-t border-sidebar-border">
+        {/* Bottom actions */}
+        <div className="px-3 py-4 border-t border-sidebar-border space-y-2">
+          {/* Language toggle */}
+          <button
+            onClick={toggleLang}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+            data-testid="button-lang-toggle"
+          >
+            <Globe className="w-4 h-4" />
+            {lang === "en" ? "Indonesia" : "English"}
+          </button>
+
+          {/* New form */}
           <button
             onClick={handleNewForm}
             disabled={createForm.isPending}
