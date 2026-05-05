@@ -3,20 +3,30 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Formly - Online Form Platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: forms
+    description: Form management
+  - name: questions
+    description: Question management
+  - name: responses
+    description: Form responses
+  - name: dashboard
+    description: Analytics and dashboard
+  - name: sheets
+    description: Google Sheets integration
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +34,438 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /forms:
+    get:
+      operationId: listForms
+      tags: [forms]
+      summary: List all forms
+      responses:
+        "200":
+          description: List of forms
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Form"
+    post:
+      operationId: createForm
+      tags: [forms]
+      summary: Create a new form
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFormBody"
+      responses:
+        "201":
+          description: Created form
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Form"
+
+  /forms/{id}:
+    get:
+      operationId: getForm
+      tags: [forms]
+      summary: Get a form by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Form
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FormWithQuestions"
+        "404":
+          description: Not found
+    put:
+      operationId: updateForm
+      tags: [forms]
+      summary: Update a form
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFormBody"
+      responses:
+        "200":
+          description: Updated form
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Form"
+    delete:
+      operationId: deleteForm
+      tags: [forms]
+      summary: Delete a form
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /forms/{id}/publish:
+    post:
+      operationId: publishForm
+      tags: [forms]
+      summary: Toggle form published state
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                published:
+                  type: boolean
+              required: [published]
+      responses:
+        "200":
+          description: Updated form
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Form"
+
+  /forms/{id}/questions:
+    get:
+      operationId: listQuestions
+      tags: [questions]
+      summary: List questions for a form
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of questions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Question"
+    post:
+      operationId: createQuestion
+      tags: [questions]
+      summary: Add a question to a form
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateQuestionBody"
+      responses:
+        "201":
+          description: Created question
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+
+  /forms/{id}/questions/reorder:
+    post:
+      operationId: reorderQuestions
+      tags: [questions]
+      summary: Reorder questions in a form
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                questionIds:
+                  type: array
+                  items:
+                    type: string
+              required: [questionIds]
+      responses:
+        "200":
+          description: Reordered questions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Question"
+
+  /forms/{formId}/questions/{questionId}:
+    put:
+      operationId: updateQuestion
+      tags: [questions]
+      summary: Update a question
+      parameters:
+        - name: formId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateQuestionBody"
+      responses:
+        "200":
+          description: Updated question
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+    delete:
+      operationId: deleteQuestion
+      tags: [questions]
+      summary: Delete a question
+      parameters:
+        - name: formId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /forms/{id}/responses:
+    get:
+      operationId: listResponses
+      tags: [responses]
+      summary: List responses for a form
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Paginated responses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedResponses"
+    post:
+      operationId: submitResponse
+      tags: [responses]
+      summary: Submit a form response
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitResponseBody"
+      responses:
+        "201":
+          description: Submitted response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Response"
+
+  /forms/{formId}/responses/{responseId}:
+    get:
+      operationId: getResponse
+      tags: [responses]
+      summary: Get a specific response
+      parameters:
+        - name: formId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: responseId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Response with answers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseWithAnswers"
+
+  /forms/{id}/stats:
+    get:
+      operationId: getFormStats
+      tags: [dashboard]
+      summary: Get analytics stats for a form
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Form statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FormStats"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get overall dashboard summary
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /forms/{id}/sheets:
+    get:
+      operationId: getSheetIntegration
+      tags: [sheets]
+      summary: Get Google Sheets integration for a form
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Sheet integration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SheetIntegration"
+    post:
+      operationId: saveSheetIntegration
+      tags: [sheets]
+      summary: Save/update Google Sheets integration
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveSheetIntegrationBody"
+      responses:
+        "200":
+          description: Saved integration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SheetIntegration"
+    delete:
+      operationId: deleteSheetIntegration
+      tags: [sheets]
+      summary: Remove Google Sheets integration
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /forms/{id}/sheets/sync:
+    post:
+      operationId: syncToSheets
+      tags: [sheets]
+      summary: Sync form responses to Google Sheets
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Sync result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rowsSynced:
+                    type: integer
+                  message:
+                    type: string
+                required: [rowsSynced, message]
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +473,338 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    Form:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        themeColor:
+          type: string
+        isPublished:
+          type: boolean
+        questionCount:
+          type: integer
+        responseCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, title, themeColor, isPublished, questionCount, responseCount, createdAt, updatedAt]
+
+    FormWithQuestions:
+      allOf:
+        - $ref: "#/components/schemas/Form"
+        - type: object
+          properties:
+            questions:
+              type: array
+              items:
+                $ref: "#/components/schemas/Question"
+          required: [questions]
+
+    CreateFormBody:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        themeColor:
+          type: string
+          default: "#6366f1"
+      required: [title]
+
+    UpdateFormBody:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        themeColor:
+          type: string
+        isPublished:
+          type: boolean
+
+    Question:
+      type: object
+      properties:
+        id:
+          type: string
+        formId:
+          type: string
+        type:
+          type: string
+          enum: [short_text, long_text, multiple_choice, checkbox, dropdown, rating, date, email, phone, number, yes_no]
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        required:
+          type: boolean
+        order:
+          type: integer
+        options:
+          type: array
+          items:
+            type: string
+          nullable: true
+        logic:
+          type: array
+          items:
+            $ref: "#/components/schemas/LogicRule"
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, formId, type, title, required, order, createdAt]
+
+    LogicRule:
+      type: object
+      properties:
+        condition:
+          type: string
+          enum: [equals, not_equals, contains, is_empty, is_not_empty, greater_than, less_than]
+        value:
+          type: string
+          nullable: true
+        jumpToQuestionId:
+          type: string
+          nullable: true
+        jumpToEnd:
+          type: boolean
+      required: [condition]
+
+    CreateQuestionBody:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [short_text, long_text, multiple_choice, checkbox, dropdown, rating, date, email, phone, number, yes_no]
+        title:
+          type: string
+        description:
+          type: string
+        required:
+          type: boolean
+          default: false
+        options:
+          type: array
+          items:
+            type: string
+        logic:
+          type: array
+          items:
+            $ref: "#/components/schemas/LogicRule"
+      required: [type, title]
+
+    UpdateQuestionBody:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [short_text, long_text, multiple_choice, checkbox, dropdown, rating, date, email, phone, number, yes_no]
+        title:
+          type: string
+        description:
+          type: string
+        required:
+          type: boolean
+        options:
+          type: array
+          items:
+            type: string
+        logic:
+          type: array
+          items:
+            $ref: "#/components/schemas/LogicRule"
+
+    Response:
+      type: object
+      properties:
+        id:
+          type: string
+        formId:
+          type: string
+        completed:
+          type: boolean
+        submittedAt:
+          type: string
+          format: date-time
+      required: [id, formId, completed, submittedAt]
+
+    ResponseWithAnswers:
+      allOf:
+        - $ref: "#/components/schemas/Response"
+        - type: object
+          properties:
+            answers:
+              type: array
+              items:
+                $ref: "#/components/schemas/Answer"
+          required: [answers]
+
+    Answer:
+      type: object
+      properties:
+        id:
+          type: string
+        questionId:
+          type: string
+        questionTitle:
+          type: string
+        value:
+          type: string
+          nullable: true
+      required: [id, questionId, questionTitle]
+
+    SubmitResponseBody:
+      type: object
+      properties:
+        answers:
+          type: array
+          items:
+            type: object
+            properties:
+              questionId:
+                type: string
+              value:
+                type: string
+            required: [questionId]
+        completed:
+          type: boolean
+          default: true
+      required: [answers]
+
+    PaginatedResponses:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResponseWithAnswers"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalPages:
+          type: integer
+      required: [data, total, page, limit, totalPages]
+
+    FormStats:
+      type: object
+      properties:
+        formId:
+          type: string
+        totalResponses:
+          type: integer
+        completedResponses:
+          type: integer
+        completionRate:
+          type: number
+        responsesPerDay:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+              count:
+                type: integer
+            required: [date, count]
+        questionStats:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestionStat"
+      required: [formId, totalResponses, completedResponses, completionRate, responsesPerDay, questionStats]
+
+    QuestionStat:
+      type: object
+      properties:
+        questionId:
+          type: string
+        questionTitle:
+          type: string
+        type:
+          type: string
+        answerCount:
+          type: integer
+        topAnswers:
+          type: array
+          items:
+            type: object
+            properties:
+              value:
+                type: string
+              count:
+                type: integer
+            required: [value, count]
+      required: [questionId, questionTitle, type, answerCount, topAnswers]
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalForms:
+          type: integer
+        publishedForms:
+          type: integer
+        totalResponses:
+          type: integer
+        responsesThisWeek:
+          type: integer
+        recentForms:
+          type: array
+          items:
+            $ref: "#/components/schemas/Form"
+      required: [totalForms, publishedForms, totalResponses, responsesThisWeek, recentForms]
+
+    SheetIntegration:
+      type: object
+      properties:
+        id:
+          type: string
+        formId:
+          type: string
+        spreadsheetId:
+          type: string
+        spreadsheetName:
+          type: string
+        sheetName:
+          type: string
+        enabled:
+          type: boolean
+        lastSyncedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, formId, spreadsheetId, spreadsheetName, sheetName, enabled, createdAt]
+
+    SaveSheetIntegrationBody:
+      type: object
+      properties:
+        spreadsheetId:
+          type: string
+        spreadsheetName:
+          type: string
+        sheetName:
+          type: string
+        enabled:
+          type: boolean
+          default: true
+      required: [spreadsheetId, spreadsheetName, sheetName]
