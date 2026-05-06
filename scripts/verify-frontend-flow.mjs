@@ -28,21 +28,21 @@ try {
   await page.goto(frontendBase, { waitUntil: "load", timeout: 20000 });
   logStep("Opened frontend");
 
-  const signOutButton = page.getByRole("button", { name: "Sign out" });
-  if ((await signOutButton.count()) > 0) {
-    await signOutButton.click();
+  const signOutButton = page.getByTestId("button-sign-out");
+  if ((await signOutButton.count()) > 0 && (await signOutButton.first().isVisible().catch(() => false))) {
+    await signOutButton.first().click();
     await page.waitForURL("**/login", { waitUntil: "load", timeout: 10000 });
     logStep("Signed out existing session");
   }
 
-  await page.getByRole("link", { name: "Sign up" }).click();
+  await page.locator("a[href='/signup']").first().click();
   await page.waitForURL("**/signup", { waitUntil: "load", timeout: 10000 });
-  await page.getByPlaceholder("Budi Santoso").fill("UI Flow");
-  await page.getByPlaceholder("you@example.com").fill(email);
-  await page.getByPlaceholder("Min. 8 characters").fill(password);
-  await page.getByRole("button", { name: "Create account" }).click();
+  await page.getByTestId("input-signup-name").fill("UI Flow");
+  await page.getByTestId("input-signup-email").fill(email);
+  await page.getByTestId("input-signup-password").fill(password);
+  await page.getByTestId("button-signup-submit").click();
   await page.waitForURL("**/", { waitUntil: "load", timeout: 15000 });
-  await page.getByRole("heading", { name: "Dashboard" }).waitFor({ timeout: 10000 });
+  await page.getByTestId("button-create-form").waitFor({ timeout: 10000 });
   logStep("Signup and dashboard login successful");
 
   const navigateToBuilder = async () => {
@@ -50,8 +50,9 @@ try {
     if (buildRegex.test(page.url())) return true;
 
     const candidates = [
-      page.getByRole("button", { name: "New Form" }),
-      page.getByRole("button", { name: "Create Form" }),
+      page.getByTestId("button-new-form"),
+      page.getByTestId("button-create-form"),
+      page.getByTestId("button-create-first-form"),
     ];
 
     for (const locator of candidates) {
@@ -209,7 +210,7 @@ try {
     waitUntil: "load",
     timeout: 15000,
   });
-  await page.getByRole("heading", { name: "Responses" }).waitFor({ timeout: 10000 });
+  await page.waitForURL(`**/forms/${formId}/responses`, { waitUntil: "load", timeout: 10000 });
 
   const responseList = await page.evaluate(
     async ({ apiBaseUrl, id }) => {

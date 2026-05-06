@@ -19,7 +19,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   const handleNewForm = () => {
     createForm.mutate(
-      { data: { title: "Untitled Form", themeColor: "#6366f1" } },
+      { data: { title: t(lang, "untitledForm"), themeColor: "#6366f1" } },
       {
         onSuccess: (form) => {
           queryClient.invalidateQueries({ queryKey: getListFormsQueryKey() });

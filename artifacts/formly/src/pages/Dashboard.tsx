@@ -43,7 +43,7 @@ export default function Dashboard() {
 
   const handleNewForm = () => {
     createForm.mutate(
-      { data: { title: "Untitled Form", themeColor: "#6366f1" } },
+      { data: { title: t(lang, "untitledForm"), themeColor: "#6366f1" } },
       {
         onSuccess: (form) => {
           queryClient.invalidateQueries({ queryKey: getListFormsQueryKey() });
@@ -169,7 +169,7 @@ export default function Dashboard() {
                         window.open(`${window.location.origin}${import.meta.env.BASE_URL}f/${form.id}`, "_blank");
                       }}
                       className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                      title="Open live form"
+                      title={t(lang, "openLiveForm")}
                       data-testid={`button-open-form-${form.id}`}
                     >
                       <ExternalLink className="w-4 h-4" />
@@ -187,7 +187,7 @@ export default function Dashboard() {
                   <button
                     onClick={(e) => handleDelete(form.id, e)}
                     className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                    title="Delete form"
+                    title={t(lang, "deleteFormAction")}
                     data-testid={`button-delete-form-${form.id}`}
                   >
                     <Trash2 className="w-4 h-4" />
