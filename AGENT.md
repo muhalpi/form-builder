@@ -1,13 +1,13 @@
-# Formly — Agent Development Guide
+# Formu — Agent Development Guide
 
-Dokumen ini adalah panduan untuk AI agent yang melanjutkan pengembangan Formly.
+Dokumen ini adalah panduan untuk AI agent yang melanjutkan pengembangan Formu.
 Baca seluruh dokumen ini sebelum menulis kode apapun.
 
 ---
 
 ## 1. Gambaran Proyek
 
-**Formly** adalah platform form builder seperti Typeform. Pengguna bisa membuat form dengan berbagai jenis pertanyaan, conditional logic, mempublikasikannya, dan melihat analitik respons.
+**Formu** adalah platform form builder seperti Typeform. Pengguna bisa membuat form dengan berbagai jenis pertanyaan, conditional logic, mempublikasikannya, dan melihat analitik respons.
 
 **Status saat ini:** UI-only (belum ada autentikasi aktif). Halaman login & signup sudah dibuat sebagai UI saja, belum terhubung ke backend auth.
 
@@ -18,7 +18,7 @@ Baca seluruh dokumen ini sebelum menulis kode apapun.
 ```
 /
 ├── artifacts/
-│   ├── formly/          ← Frontend React + Vite (port dari env PORT)
+│   ├── formu/           ← Frontend React + Vite (port dari env PORT)
 │   └── api-server/      ← Express.js API (port 8080)
 ├── lib/
 │   ├── db/              ← Drizzle ORM schema + migrations (PostgreSQL)
@@ -30,7 +30,7 @@ Baca seluruh dokumen ini sebelum menulis kode apapun.
 **Perintah penting:**
 ```bash
 # Jalankan frontend
-pnpm --filter @workspace/formly run dev
+pnpm --filter @workspace/formu run dev
 
 # Jalankan API server
 pnpm --filter @workspace/api-server run dev
@@ -130,7 +130,7 @@ Gunakan **Lucide React** saja. Ukuran: `w-4 h-4` (standar), `w-3.5 h-3.5` (kecil
 
 ## 5. Internasionalisasi (i18n)
 
-Sistem i18n custom ada di `artifacts/formly/src/lib/i18n.ts`.
+Sistem i18n custom ada di `artifacts/formu/src/lib/i18n.ts`.
 
 ```ts
 // Tambah key baru di KEDUA bahasa (en & id)

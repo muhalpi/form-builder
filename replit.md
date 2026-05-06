@@ -2,7 +2,7 @@
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. This project is **Formly** — a Typeform-like online form builder platform.
+pnpm workspace monorepo using TypeScript. This project is **Formu** — a Typeform-like online form builder platform.
 
 ## Stack
 
@@ -21,7 +21,7 @@ pnpm workspace monorepo using TypeScript. This project is **Formly** — a Typef
 
 | Artifact | Path | Description |
 |---|---|---|
-| `artifacts/formly` | `/` | React + Vite frontend (Formly UI) |
+| `artifacts/formu` | `/` | React + Vite frontend (Formu UI) |
 | `artifacts/api-server` | `/api` | Express 5 API server |
 | `artifacts/mockup-sandbox` | `/__mockup` | Component preview sandbox (dev) |
 

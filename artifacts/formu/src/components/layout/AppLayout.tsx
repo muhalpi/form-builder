@@ -49,7 +49,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
               <FileText className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="font-semibold text-sidebar-foreground tracking-tight">Formly</span>
+            <span className="font-semibold text-sidebar-foreground tracking-tight">Formu</span>
           </div>
         </div>
 

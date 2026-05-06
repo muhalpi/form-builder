@@ -1,8 +1,8 @@
 kind = "web"
 previewPath = "/"
-title = "Formly"
+title = "Formu"
 version = "1.0.0"
-id = "artifacts/formly"
+id = "artifacts/formu"
 router = "path"
 
 [[integratedSkills]]
@@ -15,11 +15,11 @@ paths = [ "/" ]
 localPort = 21848
 
 [services.development]
-run = "pnpm --filter @workspace/formly run dev"
+run = "pnpm --filter @workspace/formu run dev"
 
 [services.production]
-build = [ "pnpm", "--filter", "@workspace/formly", "run", "build" ]
-publicDir = "artifacts/formly/dist/public"
+build = [ "pnpm", "--filter", "@workspace/formu", "run", "build" ]
+publicDir = "artifacts/formu/dist/public"
 serve = "static"
 
 [[services.production.rewrites]]

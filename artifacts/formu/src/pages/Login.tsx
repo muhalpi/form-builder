@@ -42,7 +42,7 @@ export default function Login() {
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
             <FileText className="w-4 h-4 text-primary-foreground" />
           </div>
-          <span className="font-semibold text-lg text-foreground tracking-tight">Formly</span>
+          <span className="font-semibold text-lg text-foreground tracking-tight">Formu</span>
         </div>
 
         <div>
@@ -60,7 +60,7 @@ export default function Login() {
           </div>
         </div>
 
-        <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Formly. {t(lang, "rightsReserved")}</p>
+        <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} Formu. {t(lang, "rightsReserved")}</p>
       </div>
 
       {/* Right panel — form */}
@@ -71,7 +71,7 @@ export default function Login() {
             <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
               <FileText className="w-3.5 h-3.5 text-primary-foreground" />
             </div>
-            <span className="font-semibold text-foreground">Formly</span>
+            <span className="font-semibold text-foreground">Formu</span>
           </div>
 
           <h1 className="text-2xl font-bold text-foreground mb-1">{t(lang, "loginWelcomeBack")}</h1>
