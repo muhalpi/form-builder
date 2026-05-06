@@ -4,6 +4,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { LangProvider } from "@/contexts/LangContext";
 import NotFound from "@/pages/not-found";
+import Login from "@/pages/Login";
+import Signup from "@/pages/Signup";
 import Dashboard from "@/pages/Dashboard";
 import FormBuilder from "@/pages/FormBuilder";
 import FormResponses from "@/pages/FormResponses";
@@ -24,6 +26,8 @@ const queryClient = new QueryClient({
 function Router() {
   return (
     <Switch>
+      <Route path="/login" component={Login} />
+      <Route path="/signup" component={Signup} />
       <Route path="/" component={Dashboard} />
       <Route path="/forms/:id/build" component={FormBuilder} />
       <Route path="/forms/:id/responses" component={FormResponses} />
