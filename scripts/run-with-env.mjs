@@ -24,14 +24,13 @@ if (existsSync(".env")) {
     ) {
       value = value.slice(1, -1);
     }
-    env[key] = value;
+    if (env[key] == null) {
+      env[key] = value;
+    }
   }
 }
 
-const [rawCommand, ...args] = commandArgs;
-const command = process.platform === "win32" && !rawCommand.endsWith(".cmd")
-  ? `${rawCommand}.cmd`
-  : rawCommand;
+const [command, ...args] = commandArgs;
 
 const result = spawnSync(command, args, {
   stdio: "inherit",

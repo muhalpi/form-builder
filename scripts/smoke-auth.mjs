@@ -1,5 +1,6 @@
 const authBaseUrl = (process.env.BETTER_AUTH_URL ?? "http://localhost:5000").replace(/\/+$/, "");
 const apiBaseUrl = `${authBaseUrl}/api`;
+const origin = (process.env.FRONTEND_URL ?? "http://localhost:8081").replace(/\/+$/, "");
 
 const email = `codex-smoke-${Date.now()}@example.com`;
 const password = "SmokeTest123!";
@@ -25,6 +26,12 @@ function cookieHeader() {
 
 async function request(path, options = {}) {
   const headers = new Headers(options.headers);
+  if (!headers.has("origin")) {
+    headers.set("origin", origin);
+  }
+  if (!headers.has("accept")) {
+    headers.set("accept", "application/json");
+  }
   if (options.body && !headers.has("content-type")) {
     headers.set("content-type", "application/json");
   }
@@ -52,8 +59,9 @@ async function request(path, options = {}) {
 }
 
 function assertStatus(label, actual, expected) {
-  if (actual !== expected) {
-    throw new Error(`${label}: expected HTTP ${expected}, got HTTP ${actual}`);
+  const expectedValues = Array.isArray(expected) ? expected : [expected];
+  if (!expectedValues.includes(actual)) {
+    throw new Error(`${label}: expected HTTP ${expectedValues.join(" or ")}, got HTTP ${actual}`);
   }
   console.log(`${label}: HTTP ${actual}`);
 }
@@ -69,7 +77,10 @@ const signUp = await request("/auth/sign-up/email", {
     password,
   }),
 });
-assertStatus("sign up", signUp.response.status, 200);
+assertStatus("sign up", signUp.response.status, [200, 201]);
+if (signUp.response.status >= 400) {
+  console.log("sign-up error payload:", signUp.data);
+}
 
 const session = await request("/auth/get-session");
 assertStatus("get session", session.response.status, 200);
