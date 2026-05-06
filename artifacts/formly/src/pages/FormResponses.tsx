@@ -1,11 +1,12 @@
 import { useParams } from "wouter";
 import { useState } from "react";
-import { ChevronDown, ChevronUp, MessageSquare } from "lucide-react";
+import { ChevronDown, ChevronUp, MessageSquare, Download } from "lucide-react";
 import { useGetForm, useListResponses, getGetFormQueryKey } from "@workspace/api-client-react";
 import { FormLayout } from "@/components/layout/FormLayout";
-import { formatDistanceToNow, format } from "date-fns";
+import { format } from "date-fns";
 import { useLang } from "@/contexts/LangContext";
 import { t } from "@/lib/i18n";
+import { useToast } from "@/hooks/use-toast";
 
 function ResponseCard({ response, lang }: { response: any; lang: any }) {
   const [expanded, setExpanded] = useState(false);
@@ -36,7 +37,9 @@ function ResponseCard({ response, lang }: { response: any; lang: any }) {
           {response.answers.map((answer: any) => (
             <div key={answer.id} data-testid={`answer-${answer.id}`}>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">{answer.questionTitle}</p>
-              <p className="text-sm text-foreground">{answer.value || <span className="text-muted-foreground italic">{t(lang, "noAnswer")}</span>}</p>
+              <p className="text-sm text-foreground">
+                {answer.value || <span className="text-muted-foreground italic">{t(lang, "noAnswer")}</span>}
+              </p>
             </div>
           ))}
         </div>
@@ -48,19 +51,62 @@ function ResponseCard({ response, lang }: { response: any; lang: any }) {
 export default function FormResponses() {
   const { id } = useParams<{ id: string }>();
   const [page, setPage] = useState(1);
+  const [exporting, setExporting] = useState(false);
   const { lang } = useLang();
+  const { toast } = useToast();
 
   const { data: form } = useGetForm(id, { query: { queryKey: getGetFormQueryKey(id) } });
   const { data: responsesData, isLoading } = useListResponses(id, { page, limit: 20 });
+
+  const handleExportCsv = async () => {
+    setExporting(true);
+    try {
+      const apiBase = import.meta.env.VITE_API_URL ?? "http://localhost:8080";
+      const response = await fetch(`${apiBase}/api/forms/${id}/responses/export`);
+      if (!response.ok) throw new Error("Export failed");
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${(form?.title ?? "form").replace(/[^a-z0-9]/gi, "_")}_responses.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast({ title: t(lang, "exportSuccess") });
+    } catch {
+      toast({ title: t(lang, "exportError"), variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const hasResponses = responsesData && responsesData.total > 0;
 
   return (
     <FormLayout formId={id} formTitle={form?.title}>
       <div className="h-full overflow-auto">
         <div className="max-w-3xl mx-auto px-6 py-6">
+          {/* Header */}
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-foreground">{t(lang, "responsesTitle")}</h2>
-            {responsesData && (
-              <span className="text-sm text-muted-foreground">{responsesData.total} {t(lang, "totalLabel")}</span>
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold text-foreground">{t(lang, "responsesTitle")}</h2>
+              {responsesData && (
+                <span className="text-sm text-muted-foreground">{responsesData.total} {t(lang, "totalLabel")}</span>
+              )}
+            </div>
+
+            {hasResponses && (
+              <button
+                onClick={handleExportCsv}
+                disabled={exporting}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium border border-border rounded-lg hover:bg-muted transition-colors disabled:opacity-60"
+                data-testid="button-export-csv"
+              >
+                <Download className={`w-4 h-4 ${exporting ? "animate-bounce" : ""}`} />
+                {exporting ? t(lang, "exporting") : t(lang, "exportCsv")}
+              </button>
             )}
           </div>
 

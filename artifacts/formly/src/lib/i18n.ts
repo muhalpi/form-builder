@@ -133,6 +133,12 @@ export const translations = {
     descNumericInput: "Numeric input",
     descDatePicker: "Date picker",
 
+    // Export CSV
+    exportCsv: "Export CSV",
+    exporting: "Exporting...",
+    exportSuccess: "CSV downloaded successfully",
+    exportError: "Export failed. Please try again.",
+
     // Responses page
     responsesTitle: "Responses",
     noAnswer: "No answer",
@@ -323,6 +329,12 @@ export const translations = {
     descPhoneNumber: "Nomor telepon",
     descNumericInput: "Input numerik",
     descDatePicker: "Pemilih tanggal",
+
+    // Export CSV
+    exportCsv: "Ekspor CSV",
+    exporting: "Mengekspor...",
+    exportSuccess: "CSV berhasil diunduh",
+    exportError: "Ekspor gagal. Silakan coba lagi.",
 
     // Responses page
     responsesTitle: "Jawaban",
