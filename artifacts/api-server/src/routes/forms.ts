@@ -193,6 +193,51 @@ router.post("/forms/:id/publish", async (req, res): Promise<void> => {
   res.json({ ...updated, questionCount: qCount.count, responseCount: rCount.count });
 });
 
+// POST /forms/:id/duplicate
+router.post("/forms/:id/duplicate", async (req, res): Promise<void> => {
+  const params = GetFormParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const [original] = await db.select().from(formsTable).where(eq(formsTable.id, params.data.id));
+  if (!original) {
+    res.status(404).json({ error: "Form not found" });
+    return;
+  }
+
+  const [copy] = await db.insert(formsTable).values({
+    title: `${original.title} (Copy)`,
+    description: original.description,
+    themeColor: original.themeColor,
+    isPublished: false,
+  }).returning();
+
+  const originalQuestions = await db
+    .select()
+    .from(questionsTable)
+    .where(eq(questionsTable.formId, params.data.id))
+    .orderBy(questionsTable.order);
+
+  if (originalQuestions.length > 0) {
+    await db.insert(questionsTable).values(
+      originalQuestions.map((q) => ({
+        formId: copy.id,
+        type: q.type,
+        title: q.title,
+        description: q.description,
+        required: q.required,
+        order: q.order,
+        options: q.options,
+        logic: q.logic,
+      }))
+    );
+  }
+
+  res.status(201).json({ ...copy, questionCount: originalQuestions.length, responseCount: 0 });
+});
+
 // GET /forms/:id/questions
 router.get("/forms/:id/questions", async (req, res): Promise<void> => {
   const params = ListQuestionsParams.safeParse(req.params);

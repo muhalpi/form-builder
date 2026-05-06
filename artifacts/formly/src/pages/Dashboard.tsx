@@ -1,11 +1,12 @@
 import { useLocation } from "wouter";
-import { Plus, FileText, BarChart2, ExternalLink, Trash2, Globe, Lock } from "lucide-react";
+import { Plus, FileText, ExternalLink, Trash2, Globe, Lock, Copy } from "lucide-react";
 import { useListForms, useCreateForm, useDeleteForm, useGetDashboardSummary, getListFormsQueryKey } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { formatDistanceToNow } from "date-fns";
 import { useLang } from "@/contexts/LangContext";
 import { t } from "@/lib/i18n";
+import { useToast } from "@/hooks/use-toast";
 
 function StatCard({ label, value }: { label: string; value: number | string }) {
   return (
@@ -20,11 +21,29 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { lang } = useLang();
+  const { toast } = useToast();
 
   const { data: forms, isLoading: formsLoading } = useListForms();
   const { data: summary } = useGetDashboardSummary();
   const createForm = useCreateForm();
   const deleteForm = useDeleteForm();
+
+  const duplicateForm = useMutation({
+    mutationFn: async (formId: string) => {
+      const apiBase = import.meta.env.VITE_API_URL ?? "http://localhost:8080";
+      const res = await fetch(`${apiBase}/api/forms/${formId}/duplicate`, { method: "POST" });
+      if (!res.ok) throw new Error("Duplicate failed");
+      return res.json();
+    },
+    onSuccess: (newForm) => {
+      queryClient.invalidateQueries({ queryKey: getListFormsQueryKey() });
+      toast({ title: t(lang, "formDuplicated") });
+      setLocation(`/forms/${newForm.id}/build`);
+    },
+    onError: () => {
+      toast({ title: "Failed to duplicate form", variant: "destructive" });
+    },
+  });
 
   const handleNewForm = () => {
     createForm.mutate(
@@ -49,6 +68,11 @@ export default function Dashboard() {
         },
       }
     );
+  };
+
+  const handleDuplicate = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    duplicateForm.mutate(id);
   };
 
   return (
@@ -141,7 +165,7 @@ export default function Dashboard() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   {form.isPublished && (
                     <button
                       onClick={(e) => {
@@ -149,14 +173,25 @@ export default function Dashboard() {
                         window.open(`${window.location.origin}${import.meta.env.BASE_URL}f/${form.id}`, "_blank");
                       }}
                       className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      title="Open live form"
                       data-testid={`button-open-form-${form.id}`}
                     >
                       <ExternalLink className="w-4 h-4" />
                     </button>
                   )}
                   <button
+                    onClick={(e) => handleDuplicate(form.id, e)}
+                    disabled={duplicateForm.isPending && duplicateForm.variables === form.id}
+                    className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                    title={t(lang, "duplicateForm")}
+                    data-testid={`button-duplicate-form-${form.id}`}
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                  <button
                     onClick={(e) => handleDelete(form.id, e)}
                     className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    title="Delete form"
                     data-testid={`button-delete-form-${form.id}`}
                   >
                     <Trash2 className="w-4 h-4" />

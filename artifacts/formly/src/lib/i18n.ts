@@ -50,6 +50,9 @@ export const translations = {
     noFormsYet: "No forms yet. Create your first form.",
     createForm: "Create Form",
     deleteFormConfirm: "Delete this form and all its responses?",
+    duplicateForm: "Duplicate",
+    duplicating: "Duplicating...",
+    formDuplicated: "Form duplicated successfully",
 
     // Builder – sidebar
     questionsLabel: "Questions",
@@ -247,6 +250,9 @@ export const translations = {
     noFormsYet: "Belum ada formulir. Buat formulir pertama Anda.",
     createForm: "Buat Formulir",
     deleteFormConfirm: "Hapus formulir ini beserta semua jawabannya?",
+    duplicateForm: "Duplikasi",
+    duplicating: "Menduplikasi...",
+    formDuplicated: "Formulir berhasil diduplikasi",
 
     // Builder – sidebar
     questionsLabel: "Pertanyaan",
