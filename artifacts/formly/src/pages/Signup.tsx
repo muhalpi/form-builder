@@ -1,6 +1,10 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { FileText, Eye, EyeOff, Github, Check } from "lucide-react";
+import { authClient } from "@/lib/auth-client";
+import { useToast } from "@/hooks/use-toast";
+import { useLang } from "@/contexts/LangContext";
+import { t } from "@/lib/i18n";
 
 const PERKS = [
   "Unlimited forms & questions",
@@ -14,6 +18,10 @@ export default function Signup() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const { lang } = useLang();
 
   const passwordStrength = (() => {
     if (password.length === 0) return null;
@@ -23,9 +31,23 @@ export default function Signup() {
     return { label: "Strong", color: "bg-green-500", width: "w-full" };
   })();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: integrate BetterAuth sign-up
+    setIsSubmitting(true);
+
+    const result = await authClient.signUp.email({ name, email, password });
+    setIsSubmitting(false);
+
+    if (result.error) {
+      toast({
+        title: t(lang, "signUpFailed"),
+        description: result.error.message ?? t(lang, "checkCredentials"),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLocation("/");
   };
 
   return (
@@ -80,6 +102,7 @@ export default function Signup() {
           <div className="space-y-2.5 mb-6">
             <button
               type="button"
+              disabled
               className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-border rounded-lg text-sm font-medium text-foreground bg-card hover:bg-muted transition-colors"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -93,6 +116,7 @@ export default function Signup() {
 
             <button
               type="button"
+              disabled
               className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-border rounded-lg text-sm font-medium text-foreground bg-card hover:bg-muted transition-colors"
             >
               <Github className="w-4 h-4" />
@@ -170,9 +194,10 @@ export default function Signup() {
 
             <button
               type="submit"
-              className="w-full py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors"
+              disabled={isSubmitting}
+              className="w-full py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-60"
             >
-              Create account
+              {isSubmitting ? t(lang, "creatingAccount") : "Create account"}
             </button>
           </form>
 

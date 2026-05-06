@@ -610,6 +610,177 @@ export const usePublishForm = <
 };
 
 /**
+ * @summary Duplicate a form
+ */
+export const getDuplicateFormUrl = (id: string) => {
+  return `/api/forms/${id}/duplicate`;
+};
+
+export const duplicateForm = async (
+  id: string,
+  options?: RequestInit,
+): Promise<Form> => {
+  return customFetch<Form>(getDuplicateFormUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getDuplicateFormMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof duplicateForm>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof duplicateForm>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["duplicateForm"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof duplicateForm>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return duplicateForm(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DuplicateFormMutationResult = NonNullable<
+  Awaited<ReturnType<typeof duplicateForm>>
+>;
+
+export type DuplicateFormMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Duplicate a form
+ */
+export const useDuplicateForm = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof duplicateForm>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof duplicateForm>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDuplicateFormMutationOptions(options));
+};
+
+/**
+ * @summary Get a published form by ID
+ */
+export const getGetPublicFormUrl = (id: string) => {
+  return `/api/public/forms/${id}`;
+};
+
+export const getPublicForm = async (
+  id: string,
+  options?: RequestInit,
+): Promise<FormWithQuestions> => {
+  return customFetch<FormWithQuestions>(getGetPublicFormUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPublicFormQueryKey = (id: string) => {
+  return [`/api/public/forms/${id}`] as const;
+};
+
+export const getGetPublicFormQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPublicForm>>,
+  TError = ErrorType<void>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPublicForm>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetPublicFormQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPublicForm>>> = ({
+    signal,
+  }) => getPublicForm(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPublicForm>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPublicFormQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPublicForm>>
+>;
+export type GetPublicFormQueryError = ErrorType<void>;
+
+/**
+ * @summary Get a published form by ID
+ */
+
+export function useGetPublicForm<
+  TData = Awaited<ReturnType<typeof getPublicForm>>,
+  TError = ErrorType<void>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPublicForm>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPublicFormQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * @summary List questions for a form
  */
 export const getListQuestionsUrl = (id: string) => {
@@ -1238,6 +1409,93 @@ export const useSubmitResponse = <
 > => {
   return useMutation(getSubmitResponseMutationOptions(options));
 };
+
+/**
+ * @summary Export responses for a form as CSV
+ */
+export const getExportResponsesCsvUrl = (id: string) => {
+  return `/api/forms/${id}/responses/export`;
+};
+
+export const exportResponsesCsv = async (
+  id: string,
+  options?: RequestInit,
+): Promise<string> => {
+  return customFetch<string>(getExportResponsesCsvUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getExportResponsesCsvQueryKey = (id: string) => {
+  return [`/api/forms/${id}/responses/export`] as const;
+};
+
+export const getExportResponsesCsvQueryOptions = <
+  TData = Awaited<ReturnType<typeof exportResponsesCsv>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof exportResponsesCsv>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getExportResponsesCsvQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof exportResponsesCsv>>
+  > = ({ signal }) => exportResponsesCsv(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof exportResponsesCsv>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ExportResponsesCsvQueryResult = NonNullable<
+  Awaited<ReturnType<typeof exportResponsesCsv>>
+>;
+export type ExportResponsesCsvQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Export responses for a form as CSV
+ */
+
+export function useExportResponsesCsv<
+  TData = Awaited<ReturnType<typeof exportResponsesCsv>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof exportResponsesCsv>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getExportResponsesCsvQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Get a specific response

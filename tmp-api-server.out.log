@@ -1,0 +1,6 @@
+
+> @workspace/api-server@0.0.0 dev C:\Users\alpi\Documents\form-builder\artifacts\api-server
+> node ./dev.mjs
+
+[13:23:24.482] [32mINFO[39m (12448): [36mServer listening[39m
+    [35mport[39m: 5000

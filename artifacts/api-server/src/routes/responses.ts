@@ -1,6 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, count, sql, and } from "drizzle-orm";
-import { db, responsesTable, answersTable, questionsTable, formsTable } from "@workspace/db";
+import { and, count, db, eq, inArray, responsesTable, answersTable, questionsTable, formsTable, sql } from "@workspace/db";
 import {
   ListResponsesParams,
   ListResponsesQueryParams,
@@ -8,11 +7,21 @@ import {
   SubmitResponseBody,
   GetResponseParams,
 } from "@workspace/api-zod";
+import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
+async function getOwnedFormId(id: string, userId: string) {
+  const [form] = await db
+    .select({ id: formsTable.id })
+    .from(formsTable)
+    .where(and(eq(formsTable.id, id), eq(formsTable.userId, userId)));
+
+  return form;
+}
+
 // GET /forms/:id/responses
-router.get("/forms/:id/responses", async (req, res): Promise<void> => {
+router.get("/forms/:id/responses", requireAuth, async (req, res): Promise<void> => {
   const params = ListResponsesParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -20,34 +29,60 @@ router.get("/forms/:id/responses", async (req, res): Promise<void> => {
   }
 
   const query = ListResponsesQueryParams.safeParse(req.query);
-  const page = query.success ? (query.data.page ?? 1) : 1;
-  const limit = query.success ? (query.data.limit ?? 20) : 20;
+  if (!query.success) {
+    res.status(400).json({ error: query.error.message });
+    return;
+  }
+
+  const page = query.data.page ?? 1;
+  const limit = query.data.limit ?? 20;
+  const formId = params.data.id;
+
+  if (!Number.isInteger(page) || page < 1 || !Number.isInteger(limit) || limit < 1 || limit > 100) {
+    res.status(400).json({ error: "page must be >= 1 and limit must be between 1 and 100" });
+    return;
+  }
+
+  const form = await getOwnedFormId(formId, req.auth!.user.id);
+  if (!form) {
+    res.status(404).json({ error: "Form not found" });
+    return;
+  }
+
   const offset = (page - 1) * limit;
 
   const [totalRow] = await db
     .select({ count: count() })
     .from(responsesTable)
-    .where(eq(responsesTable.formId, params.data.id));
+    .where(eq(responsesTable.formId, formId));
 
   const total = totalRow.count;
 
   const responses = await db
     .select()
     .from(responsesTable)
-    .where(eq(responsesTable.formId, params.data.id))
+    .where(eq(responsesTable.formId, formId))
     .orderBy(sql`${responsesTable.submittedAt} desc`)
     .limit(limit)
     .offset(offset);
 
-  const data = await Promise.all(
-    responses.map(async (r) => {
-      const answers = await db
-        .select()
-        .from(answersTable)
-        .where(eq(answersTable.responseId, r.id));
-      return { ...r, answers };
-    })
-  );
+  const responseIds = responses.map((r) => r.id);
+  const answers = responseIds.length > 0
+    ? await db.select().from(answersTable).where(inArray(answersTable.responseId, responseIds))
+    : [];
+
+  const answersByResponse = new Map<string, typeof answers>();
+  for (const response of responses) {
+    answersByResponse.set(response.id, []);
+  }
+  for (const answer of answers) {
+    answersByResponse.get(answer.responseId)?.push(answer);
+  }
+
+  const data = responses.map((response) => ({
+    ...response,
+    answers: answersByResponse.get(response.id) ?? [],
+  }));
 
   res.json({
     data,
@@ -78,19 +113,30 @@ router.post("/forms/:id/responses", async (req, res): Promise<void> => {
     return;
   }
 
+  if (!form.isPublished) {
+    res.status(403).json({ error: "Form is not published" });
+    return;
+  }
+
+  const questions = await db
+    .select()
+    .from(questionsTable)
+    .where(eq(questionsTable.formId, params.data.id));
+
+  const questionMap = new Map(questions.map((q) => [q.id, q]));
+  const invalidAnswer = parsed.data.answers.find((answer) => !questionMap.has(answer.questionId));
+
+  if (invalidAnswer) {
+    res.status(400).json({ error: "Answers must reference questions from this form" });
+    return;
+  }
+
   const [response] = await db.insert(responsesTable).values({
     formId: params.data.id,
     completed: parsed.data.completed ?? true,
   }).returning();
 
   if (parsed.data.answers && parsed.data.answers.length > 0) {
-    const questions = await db
-      .select()
-      .from(questionsTable)
-      .where(eq(questionsTable.formId, params.data.id));
-
-    const questionMap = new Map(questions.map((q) => [q.id, q]));
-
     await db.insert(answersTable).values(
       parsed.data.answers.map((a) => ({
         responseId: response.id,
@@ -105,14 +151,19 @@ router.post("/forms/:id/responses", async (req, res): Promise<void> => {
 });
 
 // GET /forms/:id/responses/export  (CSV download — must be before /:responseId)
-router.get("/forms/:id/responses/export", async (req, res): Promise<void> => {
-  const formId = req.params.id;
-  if (!formId) {
-    res.status(400).json({ error: "Form ID required" });
+router.get("/forms/:id/responses/export", requireAuth, async (req, res): Promise<void> => {
+  const params = ListResponsesParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
     return;
   }
 
-  const [form] = await db.select().from(formsTable).where(eq(formsTable.id, formId));
+  const formId = params.data.id;
+
+  const [form] = await db
+    .select()
+    .from(formsTable)
+    .where(and(eq(formsTable.id, formId), eq(formsTable.userId, req.auth!.user.id)));
   if (!form) {
     res.status(404).json({ error: "Form not found" });
     return;
@@ -131,12 +182,7 @@ router.get("/forms/:id/responses/export", async (req, res): Promise<void> => {
     .orderBy(sql`${responsesTable.submittedAt} desc`);
 
   const allAnswers = responses.length > 0
-    ? await db
-        .select()
-        .from(answersTable)
-        .where(
-          sql`${answersTable.responseId} = ANY(ARRAY[${sql.join(responses.map(r => sql`${r.id}::uuid`), sql`, `)}])`
-        )
+    ? await db.select().from(answersTable).where(inArray(answersTable.responseId, responses.map((r) => r.id)))
     : [];
 
   const answersByResponse = new Map<string, Map<string, string>>();
@@ -171,10 +217,16 @@ router.get("/forms/:id/responses/export", async (req, res): Promise<void> => {
 });
 
 // GET /forms/:formId/responses/:responseId
-router.get("/forms/:formId/responses/:responseId", async (req, res): Promise<void> => {
+router.get("/forms/:formId/responses/:responseId", requireAuth, async (req, res): Promise<void> => {
   const params = GetResponseParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const form = await getOwnedFormId(params.data.formId, req.auth!.user.id);
+  if (!form) {
+    res.status(404).json({ error: "Form not found" });
     return;
   }
 

@@ -38,6 +38,12 @@ export const translations = {
     newForm: "New Form",
     creating: "Creating...",
     langSwitch: "Indonesia",
+    signOut: "Sign out",
+    signingIn: "Signing in...",
+    creatingAccount: "Creating account...",
+    signInFailed: "Sign in failed",
+    signUpFailed: "Sign up failed",
+    checkCredentials: "Check your email and password, then try again.",
 
     // Dashboard
     dashboardTitle: "Dashboard",
@@ -53,6 +59,9 @@ export const translations = {
     duplicateForm: "Duplicate",
     duplicating: "Duplicating...",
     formDuplicated: "Form duplicated successfully",
+    duplicateError: "Failed to duplicate form",
+    publicFormNotFound: "Form not found",
+    publicFormUnavailable: "This form may have been removed or is unavailable.",
 
     // Builder – sidebar
     questionsLabel: "Questions",
@@ -238,6 +247,12 @@ export const translations = {
     newForm: "Formulir Baru",
     creating: "Membuat...",
     langSwitch: "English",
+    signOut: "Keluar",
+    signingIn: "Sedang masuk...",
+    creatingAccount: "Membuat akun...",
+    signInFailed: "Gagal masuk",
+    signUpFailed: "Gagal mendaftar",
+    checkCredentials: "Periksa email dan kata sandi Anda, lalu coba lagi.",
 
     // Dashboard
     dashboardTitle: "Dasbor",
@@ -253,6 +268,9 @@ export const translations = {
     duplicateForm: "Duplikasi",
     duplicating: "Menduplikasi...",
     formDuplicated: "Formulir berhasil diduplikasi",
+    duplicateError: "Gagal menduplikasi formulir",
+    publicFormNotFound: "Formulir tidak ditemukan",
+    publicFormUnavailable: "Formulir ini mungkin telah dihapus atau tidak tersedia.",
 
     // Builder – sidebar
     questionsLabel: "Pertanyaan",

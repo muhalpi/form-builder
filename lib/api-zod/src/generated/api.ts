@@ -167,6 +167,82 @@ export const PublishFormResponse = zod.object({
 });
 
 /**
+ * @summary Duplicate a form
+ */
+export const DuplicateFormParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+/**
+ * @summary Get a published form by ID
+ */
+export const GetPublicFormParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const GetPublicFormResponse = zod
+  .object({
+    id: zod.string(),
+    title: zod.string(),
+    description: zod.string().nullish(),
+    themeColor: zod.string(),
+    isPublished: zod.boolean(),
+    questionCount: zod.number(),
+    responseCount: zod.number(),
+    createdAt: zod.coerce.date(),
+    updatedAt: zod.coerce.date(),
+  })
+  .and(
+    zod.object({
+      questions: zod.array(
+        zod.object({
+          id: zod.string(),
+          formId: zod.string(),
+          type: zod.enum([
+            "short_text",
+            "long_text",
+            "multiple_choice",
+            "checkbox",
+            "dropdown",
+            "ranking",
+            "rating",
+            "opinion_scale",
+            "date",
+            "email",
+            "phone",
+            "number",
+            "yes_no",
+          ]),
+          title: zod.string(),
+          description: zod.string().nullish(),
+          required: zod.boolean(),
+          order: zod.number(),
+          options: zod.array(zod.string()).nullish(),
+          logic: zod
+            .array(
+              zod.object({
+                condition: zod.enum([
+                  "equals",
+                  "not_equals",
+                  "contains",
+                  "is_empty",
+                  "is_not_empty",
+                  "greater_than",
+                  "less_than",
+                ]),
+                value: zod.string().nullish(),
+                jumpToQuestionId: zod.string().nullish(),
+                jumpToEnd: zod.boolean().optional(),
+              }),
+            )
+            .nullish(),
+          createdAt: zod.coerce.date(),
+        }),
+      ),
+    }),
+  );
+
+/**
  * @summary List questions for a form
  */
 export const ListQuestionsParams = zod.object({
@@ -433,11 +509,17 @@ export const ListResponsesParams = zod.object({
 });
 
 export const listResponsesQueryPageDefault = 1;
+
 export const listResponsesQueryLimitDefault = 20;
+export const listResponsesQueryLimitMax = 100;
 
 export const ListResponsesQueryParams = zod.object({
-  page: zod.coerce.number().default(listResponsesQueryPageDefault),
-  limit: zod.coerce.number().default(listResponsesQueryLimitDefault),
+  page: zod.coerce.number().min(1).default(listResponsesQueryPageDefault),
+  limit: zod.coerce
+    .number()
+    .min(1)
+    .max(listResponsesQueryLimitMax)
+    .default(listResponsesQueryLimitDefault),
 });
 
 export const ListResponsesResponse = zod.object({
@@ -485,6 +567,13 @@ export const SubmitResponseBody = zod.object({
     }),
   ),
   completed: zod.boolean().default(submitResponseBodyCompletedDefault),
+});
+
+/**
+ * @summary Export responses for a form as CSV
+ */
+export const ExportResponsesCsvParams = zod.object({
+  id: zod.coerce.string(),
 });
 
 /**

@@ -1,6 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and } from "drizzle-orm";
-import { db, sheetIntegrationsTable, responsesTable, answersTable, questionsTable } from "@workspace/db";
+import { and, db, eq, formsTable, responsesTable, sheetIntegrationsTable } from "@workspace/db";
 import {
   GetSheetIntegrationParams,
   SaveSheetIntegrationParams,
@@ -8,14 +7,30 @@ import {
   DeleteSheetIntegrationParams,
   SyncToSheetsParams,
 } from "@workspace/api-zod";
+import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
+async function getOwnedFormId(id: string, userId: string) {
+  const [form] = await db
+    .select({ id: formsTable.id })
+    .from(formsTable)
+    .where(and(eq(formsTable.id, id), eq(formsTable.userId, userId)));
+
+  return form;
+}
+
 // GET /forms/:id/sheets
-router.get("/forms/:id/sheets", async (req, res): Promise<void> => {
+router.get("/forms/:id/sheets", requireAuth, async (req, res): Promise<void> => {
   const params = GetSheetIntegrationParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const form = await getOwnedFormId(params.data.id, req.auth!.user.id);
+  if (!form) {
+    res.status(404).json({ error: "Form not found" });
     return;
   }
 
@@ -33,7 +48,7 @@ router.get("/forms/:id/sheets", async (req, res): Promise<void> => {
 });
 
 // POST /forms/:id/sheets
-router.post("/forms/:id/sheets", async (req, res): Promise<void> => {
+router.post("/forms/:id/sheets", requireAuth, async (req, res): Promise<void> => {
   const params = SaveSheetIntegrationParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -43,6 +58,12 @@ router.post("/forms/:id/sheets", async (req, res): Promise<void> => {
   const parsed = SaveSheetIntegrationBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const form = await getOwnedFormId(params.data.id, req.auth!.user.id);
+  if (!form) {
+    res.status(404).json({ error: "Form not found" });
     return;
   }
 
@@ -80,10 +101,16 @@ router.post("/forms/:id/sheets", async (req, res): Promise<void> => {
 });
 
 // DELETE /forms/:id/sheets
-router.delete("/forms/:id/sheets", async (req, res): Promise<void> => {
+router.delete("/forms/:id/sheets", requireAuth, async (req, res): Promise<void> => {
   const params = DeleteSheetIntegrationParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const form = await getOwnedFormId(params.data.id, req.auth!.user.id);
+  if (!form) {
+    res.status(404).json({ error: "Form not found" });
     return;
   }
 
@@ -95,10 +122,16 @@ router.delete("/forms/:id/sheets", async (req, res): Promise<void> => {
 });
 
 // POST /forms/:id/sheets/sync
-router.post("/forms/:id/sheets/sync", async (req, res): Promise<void> => {
+router.post("/forms/:id/sheets/sync", requireAuth, async (req, res): Promise<void> => {
   const params = SyncToSheetsParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const form = await getOwnedFormId(params.data.id, req.auth!.user.id);
+  if (!form) {
+    res.status(404).json({ error: "Form not found" });
     return;
   }
 

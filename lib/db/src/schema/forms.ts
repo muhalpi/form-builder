@@ -1,9 +1,11 @@
 import { pgTable, text, boolean, integer, timestamp, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { userTable } from "./auth";
 
 export const formsTable = pgTable("forms", {
   id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id").references(() => userTable.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   description: text("description"),
   themeColor: text("theme_color").notNull().default("#6366f1"),

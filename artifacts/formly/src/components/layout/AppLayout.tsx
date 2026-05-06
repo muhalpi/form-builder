@@ -1,10 +1,11 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Plus, FileText, Globe } from "lucide-react";
+import { LayoutDashboard, Plus, FileText, Globe, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCreateForm, getListFormsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLang } from "@/contexts/LangContext";
 import { t } from "@/lib/i18n";
+import { authClient } from "@/lib/auth-client";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -31,6 +32,12 @@ export function AppLayout({ children }: AppLayoutProps) {
   const nav = [
     { href: "/", icon: LayoutDashboard, label: t(lang, "dashboardNav") },
   ];
+
+  const handleSignOut = async () => {
+    await authClient.signOut();
+    queryClient.clear();
+    setLocation("/login");
+  };
 
   return (
     <div className="flex h-screen bg-background">
@@ -76,6 +83,15 @@ export function AppLayout({ children }: AppLayoutProps) {
           >
             <Globe className="w-4 h-4" />
             {t(lang, "langSwitch")}
+          </button>
+
+          <button
+            onClick={handleSignOut}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+            data-testid="button-sign-out"
+          >
+            <LogOut className="w-4 h-4" />
+            {t(lang, "signOut")}
           </button>
 
           {/* New form */}

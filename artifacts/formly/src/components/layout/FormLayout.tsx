@@ -1,8 +1,10 @@
 import { Link, useLocation } from "wouter";
-import { ArrowLeft, FileText, BarChart2, Settings, Eye, MessageSquare, Globe } from "lucide-react";
+import { ArrowLeft, FileText, BarChart2, Settings, Eye, MessageSquare, Globe, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLang } from "@/contexts/LangContext";
 import { t } from "@/lib/i18n";
+import { useQueryClient } from "@tanstack/react-query";
+import { authClient } from "@/lib/auth-client";
 
 interface FormLayoutProps {
   formId: string;
@@ -11,8 +13,9 @@ interface FormLayoutProps {
 }
 
 export function FormLayout({ formId, formTitle, children }: FormLayoutProps) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { lang, toggleLang } = useLang();
+  const queryClient = useQueryClient();
 
   const tabs = [
     { href: `/forms/${formId}/build`, icon: FileText, label: t(lang, "tabBuild") },
@@ -20,6 +23,12 @@ export function FormLayout({ formId, formTitle, children }: FormLayoutProps) {
     { href: `/forms/${formId}/stats`, icon: BarChart2, label: t(lang, "tabStats") },
     { href: `/forms/${formId}/settings`, icon: Settings, label: t(lang, "tabSettings") },
   ];
+
+  const handleSignOut = async () => {
+    await authClient.signOut();
+    queryClient.clear();
+    setLocation("/login");
+  };
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -46,6 +55,15 @@ export function FormLayout({ formId, formTitle, children }: FormLayoutProps) {
         >
           <Globe className="w-3.5 h-3.5" />
           {t(lang, "langSwitch")}
+        </button>
+
+        <button
+          onClick={handleSignOut}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted hover:text-foreground transition-colors"
+          data-testid="button-sign-out"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          {t(lang, "signOut")}
         </button>
 
         <Link href={`/forms/${formId}/preview`}>

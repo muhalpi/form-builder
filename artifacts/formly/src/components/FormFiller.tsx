@@ -426,7 +426,10 @@ export default function FormFiller({ form, previewMode }: FormFillerProps) {
   const { lang } = useLang();
 
   const { data: questionsData } = useListQuestions(form.id, {
-    query: { queryKey: getListQuestionsQueryKey(form.id) }
+    query: {
+      enabled: !form.questions,
+      queryKey: getListQuestionsQueryKey(form.id),
+    },
   });
 
   const questions = (form.questions || questionsData || []) as Question[];

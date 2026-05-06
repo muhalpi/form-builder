@@ -1,27 +1,37 @@
 import { Router, type IRouter } from "express";
-import { eq, count, sql, gte, and } from "drizzle-orm";
-import { db, formsTable, questionsTable, responsesTable, answersTable } from "@workspace/db";
+import { and, count, db, eq, formsTable, gte, questionsTable, responsesTable, answersTable, sql } from "@workspace/db";
 import {
   GetFormStatsParams,
 } from "@workspace/api-zod";
+import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
 // GET /dashboard/summary
-router.get("/dashboard/summary", async (_req, res): Promise<void> => {
-  const [totalFormsRow] = await db.select({ count: count() }).from(formsTable);
+router.get("/dashboard/summary", requireAuth, async (req, res): Promise<void> => {
+  const userId = req.auth!.user.id;
+
+  const [totalFormsRow] = await db
+    .select({ count: count() })
+    .from(formsTable)
+    .where(eq(formsTable.userId, userId));
   const [publishedFormsRow] = await db
     .select({ count: count() })
     .from(formsTable)
-    .where(eq(formsTable.isPublished, true));
-  const [totalResponsesRow] = await db.select({ count: count() }).from(responsesTable);
+    .where(and(eq(formsTable.userId, userId), eq(formsTable.isPublished, true)));
+  const [totalResponsesRow] = await db
+    .select({ count: count() })
+    .from(responsesTable)
+    .innerJoin(formsTable, eq(formsTable.id, responsesTable.formId))
+    .where(eq(formsTable.userId, userId));
 
   const oneWeekAgo = new Date();
   oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
   const [weekResponsesRow] = await db
     .select({ count: count() })
     .from(responsesTable)
-    .where(gte(responsesTable.submittedAt, oneWeekAgo));
+    .innerJoin(formsTable, eq(formsTable.id, responsesTable.formId))
+    .where(and(eq(formsTable.userId, userId), gte(responsesTable.submittedAt, oneWeekAgo)));
 
   const recentForms = await db
     .select({
@@ -38,6 +48,7 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
     .from(formsTable)
     .leftJoin(questionsTable, eq(questionsTable.formId, formsTable.id))
     .leftJoin(responsesTable, eq(responsesTable.formId, formsTable.id))
+    .where(eq(formsTable.userId, userId))
     .groupBy(formsTable.id)
     .orderBy(sql`${formsTable.updatedAt} desc`)
     .limit(5);
@@ -52,7 +63,7 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
 });
 
 // GET /forms/:id/stats
-router.get("/forms/:id/stats", async (req, res): Promise<void> => {
+router.get("/forms/:id/stats", requireAuth, async (req, res): Promise<void> => {
   const params = GetFormStatsParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -60,6 +71,15 @@ router.get("/forms/:id/stats", async (req, res): Promise<void> => {
   }
 
   const formId = params.data.id;
+  const [form] = await db
+    .select({ id: formsTable.id })
+    .from(formsTable)
+    .where(and(eq(formsTable.id, formId), eq(formsTable.userId, req.auth!.user.id)));
+
+  if (!form) {
+    res.status(404).json({ error: "Form not found" });
+    return;
+  }
 
   const [totalRow] = await db
     .select({ count: count() })

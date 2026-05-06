@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { Plus, FileText, ExternalLink, Trash2, Globe, Lock, Copy } from "lucide-react";
-import { useListForms, useCreateForm, useDeleteForm, useGetDashboardSummary, getListFormsQueryKey } from "@workspace/api-client-react";
-import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { useListForms, useCreateForm, useDeleteForm, useDuplicateForm, useGetDashboardSummary, getListFormsQueryKey } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { formatDistanceToNow } from "date-fns";
 import { useLang } from "@/contexts/LangContext";
@@ -28,20 +28,16 @@ export default function Dashboard() {
   const createForm = useCreateForm();
   const deleteForm = useDeleteForm();
 
-  const duplicateForm = useMutation({
-    mutationFn: async (formId: string) => {
-      const apiBase = import.meta.env.VITE_API_URL ?? "http://localhost:8080";
-      const res = await fetch(`${apiBase}/api/forms/${formId}/duplicate`, { method: "POST" });
-      if (!res.ok) throw new Error("Duplicate failed");
-      return res.json();
-    },
-    onSuccess: (newForm) => {
-      queryClient.invalidateQueries({ queryKey: getListFormsQueryKey() });
-      toast({ title: t(lang, "formDuplicated") });
-      setLocation(`/forms/${newForm.id}/build`);
-    },
-    onError: () => {
-      toast({ title: "Failed to duplicate form", variant: "destructive" });
+  const duplicateForm = useDuplicateForm({
+    mutation: {
+      onSuccess: (newForm) => {
+        queryClient.invalidateQueries({ queryKey: getListFormsQueryKey() });
+        toast({ title: t(lang, "formDuplicated") });
+        setLocation(`/forms/${newForm.id}/build`);
+      },
+      onError: () => {
+        toast({ title: t(lang, "duplicateError"), variant: "destructive" });
+      },
     },
   });
 
@@ -72,7 +68,7 @@ export default function Dashboard() {
 
   const handleDuplicate = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    duplicateForm.mutate(id);
+    duplicateForm.mutate({ id });
   };
 
   return (
@@ -181,7 +177,7 @@ export default function Dashboard() {
                   )}
                   <button
                     onClick={(e) => handleDuplicate(form.id, e)}
-                    disabled={duplicateForm.isPending && duplicateForm.variables === form.id}
+                    disabled={duplicateForm.isPending && duplicateForm.variables?.id === form.id}
                     className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
                     title={t(lang, "duplicateForm")}
                     data-testid={`button-duplicate-form-${form.id}`}

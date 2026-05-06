@@ -1,7 +1,7 @@
 import { useParams } from "wouter";
 import { useState } from "react";
 import { ChevronDown, ChevronUp, MessageSquare, Download } from "lucide-react";
-import { useGetForm, useListResponses, getGetFormQueryKey } from "@workspace/api-client-react";
+import { exportResponsesCsv, useGetForm, useListResponses, getGetFormQueryKey } from "@workspace/api-client-react";
 import { FormLayout } from "@/components/layout/FormLayout";
 import { format } from "date-fns";
 import { useLang } from "@/contexts/LangContext";
@@ -61,11 +61,8 @@ export default function FormResponses() {
   const handleExportCsv = async () => {
     setExporting(true);
     try {
-      const apiBase = import.meta.env.VITE_API_URL ?? "http://localhost:8080";
-      const response = await fetch(`${apiBase}/api/forms/${id}/responses/export`);
-      if (!response.ok) throw new Error("Export failed");
-
-      const blob = await response.blob();
+      const csv = await exportResponsesCsv(id);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;

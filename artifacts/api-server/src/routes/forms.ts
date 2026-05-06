@@ -1,6 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, count, sql } from "drizzle-orm";
-import { db, formsTable, questionsTable, responsesTable } from "@workspace/db";
+import { and, count, db, eq, formsTable, questionsTable, responsesTable, sql } from "@workspace/db";
 import {
   CreateFormBody,
   UpdateFormBody,
@@ -18,58 +17,19 @@ import {
   UpdateQuestionBody,
   DeleteQuestionParams,
 } from "@workspace/api-zod";
+import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
-// GET /forms
-router.get("/forms", async (_req, res): Promise<void> => {
-  const forms = await db
-    .select({
-      id: formsTable.id,
-      title: formsTable.title,
-      description: formsTable.description,
-      themeColor: formsTable.themeColor,
-      isPublished: formsTable.isPublished,
-      createdAt: formsTable.createdAt,
-      updatedAt: formsTable.updatedAt,
-      questionCount: sql<number>`cast(count(distinct ${questionsTable.id}) as int)`,
-      responseCount: sql<number>`cast(count(distinct ${responsesTable.id}) as int)`,
-    })
-    .from(formsTable)
-    .leftJoin(questionsTable, eq(questionsTable.formId, formsTable.id))
-    .leftJoin(responsesTable, eq(responsesTable.formId, formsTable.id))
-    .groupBy(formsTable.id)
-    .orderBy(sql`${formsTable.updatedAt} desc`);
+function mapQuestion(q: typeof questionsTable.$inferSelect) {
+  return {
+    ...q,
+    options: q.options ?? null,
+    logic: (q.logic as any[]) ?? null,
+  };
+}
 
-  res.json(forms);
-});
-
-// POST /forms
-router.post("/forms", async (req, res): Promise<void> => {
-  const parsed = CreateFormBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
-
-  const [form] = await db.insert(formsTable).values({
-    title: parsed.data.title,
-    description: parsed.data.description,
-    themeColor: parsed.data.themeColor ?? "#6366f1",
-  }).returning();
-
-  const result = { ...form, questionCount: 0, responseCount: 0 };
-  res.status(201).json(result);
-});
-
-// GET /forms/:id
-router.get("/forms/:id", async (req, res): Promise<void> => {
-  const params = GetFormParams.safeParse(req.params);
-  if (!params.success) {
-    res.status(400).json({ error: params.error.message });
-    return;
-  }
-
+async function getFormWithCounts(id: string, userId?: string) {
   const [formRow] = await db
     .select({
       id: formsTable.id,
@@ -85,8 +45,74 @@ router.get("/forms/:id", async (req, res): Promise<void> => {
     .from(formsTable)
     .leftJoin(questionsTable, eq(questionsTable.formId, formsTable.id))
     .leftJoin(responsesTable, eq(responsesTable.formId, formsTable.id))
-    .where(eq(formsTable.id, params.data.id))
+    .where(userId ? and(eq(formsTable.id, id), eq(formsTable.userId, userId)) : eq(formsTable.id, id))
     .groupBy(formsTable.id);
+
+  return formRow;
+}
+
+async function getOwnedFormId(id: string, userId: string) {
+  const [form] = await db
+    .select({ id: formsTable.id })
+    .from(formsTable)
+    .where(and(eq(formsTable.id, id), eq(formsTable.userId, userId)));
+
+  return form;
+}
+
+// GET /forms
+router.get("/forms", requireAuth, async (req, res): Promise<void> => {
+  const userId = req.auth!.user.id;
+  const forms = await db
+    .select({
+      id: formsTable.id,
+      title: formsTable.title,
+      description: formsTable.description,
+      themeColor: formsTable.themeColor,
+      isPublished: formsTable.isPublished,
+      createdAt: formsTable.createdAt,
+      updatedAt: formsTable.updatedAt,
+      questionCount: sql<number>`cast(count(distinct ${questionsTable.id}) as int)`,
+      responseCount: sql<number>`cast(count(distinct ${responsesTable.id}) as int)`,
+    })
+    .from(formsTable)
+    .leftJoin(questionsTable, eq(questionsTable.formId, formsTable.id))
+    .leftJoin(responsesTable, eq(responsesTable.formId, formsTable.id))
+    .where(eq(formsTable.userId, userId))
+    .groupBy(formsTable.id)
+    .orderBy(sql`${formsTable.updatedAt} desc`);
+
+  res.json(forms);
+});
+
+// POST /forms
+router.post("/forms", requireAuth, async (req, res): Promise<void> => {
+  const parsed = CreateFormBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [form] = await db.insert(formsTable).values({
+    userId: req.auth!.user.id,
+    title: parsed.data.title,
+    description: parsed.data.description,
+    themeColor: parsed.data.themeColor ?? "#6366f1",
+  }).returning();
+
+  const result = { ...form, questionCount: 0, responseCount: 0 };
+  res.status(201).json(result);
+});
+
+// GET /forms/:id
+router.get("/forms/:id", requireAuth, async (req, res): Promise<void> => {
+  const params = GetFormParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const formRow = await getFormWithCounts(params.data.id, req.auth!.user.id);
 
   if (!formRow) {
     res.status(404).json({ error: "Form not found" });
@@ -99,17 +125,37 @@ router.get("/forms/:id", async (req, res): Promise<void> => {
     .where(eq(questionsTable.formId, params.data.id))
     .orderBy(questionsTable.order);
 
-  const mappedQuestions = questions.map((q) => ({
-    ...q,
-    options: q.options ?? null,
-    logic: (q.logic as any[]) ?? null,
-  }));
+  const mappedQuestions = questions.map(mapQuestion);
 
   res.json({ ...formRow, questions: mappedQuestions });
 });
 
+// GET /public/forms/:id
+router.get("/public/forms/:id", async (req, res): Promise<void> => {
+  const params = GetFormParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const formRow = await getFormWithCounts(params.data.id);
+
+  if (!formRow || !formRow.isPublished) {
+    res.status(404).json({ error: "Form not found" });
+    return;
+  }
+
+  const questions = await db
+    .select()
+    .from(questionsTable)
+    .where(eq(questionsTable.formId, params.data.id))
+    .orderBy(questionsTable.order);
+
+  res.json({ ...formRow, questions: questions.map(mapQuestion) });
+});
+
 // PUT /forms/:id
-router.put("/forms/:id", async (req, res): Promise<void> => {
+router.put("/forms/:id", requireAuth, async (req, res): Promise<void> => {
   const params = UpdateFormParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -131,7 +177,7 @@ router.put("/forms/:id", async (req, res): Promise<void> => {
   const [updated] = await db
     .update(formsTable)
     .set(updateData)
-    .where(eq(formsTable.id, params.data.id))
+    .where(and(eq(formsTable.id, params.data.id), eq(formsTable.userId, req.auth!.user.id)))
     .returning();
 
   if (!updated) {
@@ -146,14 +192,17 @@ router.put("/forms/:id", async (req, res): Promise<void> => {
 });
 
 // DELETE /forms/:id
-router.delete("/forms/:id", async (req, res): Promise<void> => {
+router.delete("/forms/:id", requireAuth, async (req, res): Promise<void> => {
   const params = DeleteFormParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
 
-  const [deleted] = await db.delete(formsTable).where(eq(formsTable.id, params.data.id)).returning();
+  const [deleted] = await db
+    .delete(formsTable)
+    .where(and(eq(formsTable.id, params.data.id), eq(formsTable.userId, req.auth!.user.id)))
+    .returning();
   if (!deleted) {
     res.status(404).json({ error: "Form not found" });
     return;
@@ -163,7 +212,7 @@ router.delete("/forms/:id", async (req, res): Promise<void> => {
 });
 
 // POST /forms/:id/publish
-router.post("/forms/:id/publish", async (req, res): Promise<void> => {
+router.post("/forms/:id/publish", requireAuth, async (req, res): Promise<void> => {
   const params = PublishFormParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -179,7 +228,7 @@ router.post("/forms/:id/publish", async (req, res): Promise<void> => {
   const [updated] = await db
     .update(formsTable)
     .set({ isPublished: parsed.data.published })
-    .where(eq(formsTable.id, params.data.id))
+    .where(and(eq(formsTable.id, params.data.id), eq(formsTable.userId, req.auth!.user.id)))
     .returning();
 
   if (!updated) {
@@ -194,20 +243,24 @@ router.post("/forms/:id/publish", async (req, res): Promise<void> => {
 });
 
 // POST /forms/:id/duplicate
-router.post("/forms/:id/duplicate", async (req, res): Promise<void> => {
+router.post("/forms/:id/duplicate", requireAuth, async (req, res): Promise<void> => {
   const params = GetFormParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
 
-  const [original] = await db.select().from(formsTable).where(eq(formsTable.id, params.data.id));
+  const [original] = await db
+    .select()
+    .from(formsTable)
+    .where(and(eq(formsTable.id, params.data.id), eq(formsTable.userId, req.auth!.user.id)));
   if (!original) {
     res.status(404).json({ error: "Form not found" });
     return;
   }
 
   const [copy] = await db.insert(formsTable).values({
+    userId: req.auth!.user.id,
     title: `${original.title} (Copy)`,
     description: original.description,
     themeColor: original.themeColor,
@@ -239,10 +292,16 @@ router.post("/forms/:id/duplicate", async (req, res): Promise<void> => {
 });
 
 // GET /forms/:id/questions
-router.get("/forms/:id/questions", async (req, res): Promise<void> => {
+router.get("/forms/:id/questions", requireAuth, async (req, res): Promise<void> => {
   const params = ListQuestionsParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const form = await getOwnedFormId(params.data.id, req.auth!.user.id);
+  if (!form) {
+    res.status(404).json({ error: "Form not found" });
     return;
   }
 
@@ -252,17 +311,11 @@ router.get("/forms/:id/questions", async (req, res): Promise<void> => {
     .where(eq(questionsTable.formId, params.data.id))
     .orderBy(questionsTable.order);
 
-  const mapped = questions.map((q) => ({
-    ...q,
-    options: q.options ?? null,
-    logic: (q.logic as any[]) ?? null,
-  }));
-
-  res.json(mapped);
+  res.json(questions.map(mapQuestion));
 });
 
 // POST /forms/:id/questions
-router.post("/forms/:id/questions", async (req, res): Promise<void> => {
+router.post("/forms/:id/questions", requireAuth, async (req, res): Promise<void> => {
   const params = CreateQuestionParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -272,6 +325,16 @@ router.post("/forms/:id/questions", async (req, res): Promise<void> => {
   const parsed = CreateQuestionBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [form] = await db
+    .select({ id: formsTable.id })
+    .from(formsTable)
+    .where(and(eq(formsTable.id, params.data.id), eq(formsTable.userId, req.auth!.user.id)));
+
+  if (!form) {
+    res.status(404).json({ error: "Form not found" });
     return;
   }
 
@@ -293,15 +356,11 @@ router.post("/forms/:id/questions", async (req, res): Promise<void> => {
     logic: parsed.data.logic ?? null,
   }).returning();
 
-  res.status(201).json({
-    ...question,
-    options: question.options ?? null,
-    logic: (question.logic as any[]) ?? null,
-  });
+  res.status(201).json(mapQuestion(question));
 });
 
 // POST /forms/:id/questions/reorder
-router.post("/forms/:id/questions/reorder", async (req, res): Promise<void> => {
+router.post("/forms/:id/questions/reorder", requireAuth, async (req, res): Promise<void> => {
   const params = ReorderQuestionsParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -314,11 +373,40 @@ router.post("/forms/:id/questions/reorder", async (req, res): Promise<void> => {
     return;
   }
 
-  for (let i = 0; i < parsed.data.questionIds.length; i++) {
+  const form = await getOwnedFormId(params.data.id, req.auth!.user.id);
+  if (!form) {
+    res.status(404).json({ error: "Form not found" });
+    return;
+  }
+
+  const currentQuestions = await db
+    .select({ id: questionsTable.id })
+    .from(questionsTable)
+    .where(eq(questionsTable.formId, params.data.id));
+
+  const currentIds = new Set(currentQuestions.map((q) => q.id));
+  const requestedIds = parsed.data.questionIds;
+  const uniqueRequestedIds = new Set(requestedIds);
+
+  if (
+    requestedIds.length !== currentQuestions.length ||
+    uniqueRequestedIds.size !== requestedIds.length ||
+    requestedIds.some((id) => !currentIds.has(id))
+  ) {
+    res.status(400).json({ error: "questionIds must exactly match this form's questions" });
+    return;
+  }
+
+  for (let i = 0; i < requestedIds.length; i++) {
     await db
       .update(questionsTable)
       .set({ order: i })
-      .where(eq(questionsTable.id, parsed.data.questionIds[i]));
+      .where(
+        and(
+          eq(questionsTable.formId, params.data.id),
+          eq(questionsTable.id, requestedIds[i]),
+        ),
+      );
   }
 
   const questions = await db
@@ -327,11 +415,11 @@ router.post("/forms/:id/questions/reorder", async (req, res): Promise<void> => {
     .where(eq(questionsTable.formId, params.data.id))
     .orderBy(questionsTable.order);
 
-  res.json(questions.map((q) => ({ ...q, options: q.options ?? null, logic: (q.logic as any[]) ?? null })));
+  res.json(questions.map(mapQuestion));
 });
 
 // PUT /forms/:formId/questions/:questionId
-router.put("/forms/:formId/questions/:questionId", async (req, res): Promise<void> => {
+router.put("/forms/:formId/questions/:questionId", requireAuth, async (req, res): Promise<void> => {
   const params = UpdateQuestionParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -341,6 +429,12 @@ router.put("/forms/:formId/questions/:questionId", async (req, res): Promise<voi
   const parsed = UpdateQuestionBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const form = await getOwnedFormId(params.data.formId, req.auth!.user.id);
+  if (!form) {
+    res.status(404).json({ error: "Form not found" });
     return;
   }
 
@@ -355,7 +449,12 @@ router.put("/forms/:formId/questions/:questionId", async (req, res): Promise<voi
   const [updated] = await db
     .update(questionsTable)
     .set(updateData)
-    .where(eq(questionsTable.id, params.data.questionId))
+    .where(
+      and(
+        eq(questionsTable.formId, params.data.formId),
+        eq(questionsTable.id, params.data.questionId),
+      ),
+    )
     .returning();
 
   if (!updated) {
@@ -363,20 +462,31 @@ router.put("/forms/:formId/questions/:questionId", async (req, res): Promise<voi
     return;
   }
 
-  res.json({ ...updated, options: updated.options ?? null, logic: (updated.logic as any[]) ?? null });
+  res.json(mapQuestion(updated));
 });
 
 // DELETE /forms/:formId/questions/:questionId
-router.delete("/forms/:formId/questions/:questionId", async (req, res): Promise<void> => {
+router.delete("/forms/:formId/questions/:questionId", requireAuth, async (req, res): Promise<void> => {
   const params = DeleteQuestionParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
 
+  const form = await getOwnedFormId(params.data.formId, req.auth!.user.id);
+  if (!form) {
+    res.status(404).json({ error: "Form not found" });
+    return;
+  }
+
   const [deleted] = await db
     .delete(questionsTable)
-    .where(eq(questionsTable.id, params.data.questionId))
+    .where(
+      and(
+        eq(questionsTable.formId, params.data.formId),
+        eq(questionsTable.id, params.data.questionId),
+      ),
+    )
     .returning();
 
   if (!deleted) {
