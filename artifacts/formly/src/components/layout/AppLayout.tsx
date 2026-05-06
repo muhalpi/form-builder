@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { useCreateForm, getListFormsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLang } from "@/contexts/LangContext";
+import { t } from "@/lib/i18n";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -28,7 +29,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   };
 
   const nav = [
-    { href: "/", icon: LayoutDashboard, label: "Dashboard" },
+    { href: "/", icon: LayoutDashboard, label: t(lang, "dashboardNav") },
   ];
 
   return (
@@ -74,7 +75,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             data-testid="button-lang-toggle"
           >
             <Globe className="w-4 h-4" />
-            {lang === "en" ? "Indonesia" : "English"}
+            {t(lang, "langSwitch")}
           </button>
 
           {/* New form */}
@@ -85,7 +86,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             data-testid="button-new-form"
           >
             <Plus className="w-4 h-4" />
-            {createForm.isPending ? "Creating..." : "New Form"}
+            {createForm.isPending ? t(lang, "creating") : t(lang, "newForm")}
           </button>
         </div>
       </aside>

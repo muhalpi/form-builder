@@ -2,6 +2,7 @@ import { Link, useLocation } from "wouter";
 import { ArrowLeft, FileText, BarChart2, Settings, Eye, MessageSquare, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLang } from "@/contexts/LangContext";
+import { t } from "@/lib/i18n";
 
 interface FormLayoutProps {
   formId: string;
@@ -14,10 +15,10 @@ export function FormLayout({ formId, formTitle, children }: FormLayoutProps) {
   const { lang, toggleLang } = useLang();
 
   const tabs = [
-    { href: `/forms/${formId}/build`, icon: FileText, label: "Build" },
-    { href: `/forms/${formId}/responses`, icon: MessageSquare, label: "Responses" },
-    { href: `/forms/${formId}/stats`, icon: BarChart2, label: "Stats" },
-    { href: `/forms/${formId}/settings`, icon: Settings, label: "Settings" },
+    { href: `/forms/${formId}/build`, icon: FileText, label: t(lang, "tabBuild") },
+    { href: `/forms/${formId}/responses`, icon: MessageSquare, label: t(lang, "tabResponses") },
+    { href: `/forms/${formId}/stats`, icon: BarChart2, label: t(lang, "tabStats") },
+    { href: `/forms/${formId}/settings`, icon: Settings, label: t(lang, "tabSettings") },
   ];
 
   return (
@@ -27,7 +28,7 @@ export function FormLayout({ formId, formTitle, children }: FormLayoutProps) {
         <Link href="/">
           <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-back">
             <ArrowLeft className="w-4 h-4" />
-            Back
+            {t(lang, "backLabel")}
           </button>
         </Link>
         <div className="w-px h-5 bg-border" />
@@ -44,13 +45,13 @@ export function FormLayout({ formId, formTitle, children }: FormLayoutProps) {
           data-testid="button-lang-toggle"
         >
           <Globe className="w-3.5 h-3.5" />
-          {lang === "en" ? "Indonesia" : "English"}
+          {t(lang, "langSwitch")}
         </button>
 
         <Link href={`/forms/${formId}/preview`}>
           <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-border rounded-md hover:bg-muted transition-colors" data-testid="button-preview">
             <Eye className="w-3.5 h-3.5" />
-            Preview
+            {t(lang, "previewBtn")}
           </button>
         </Link>
       </header>

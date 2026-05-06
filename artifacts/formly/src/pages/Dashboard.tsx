@@ -4,6 +4,8 @@ import { useListForms, useCreateForm, useDeleteForm, useGetDashboardSummary, get
 import { useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { formatDistanceToNow } from "date-fns";
+import { useLang } from "@/contexts/LangContext";
+import { t } from "@/lib/i18n";
 
 function StatCard({ label, value }: { label: string; value: number | string }) {
   return (
@@ -17,6 +19,7 @@ function StatCard({ label, value }: { label: string; value: number | string }) {
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const { lang } = useLang();
 
   const { data: forms, isLoading: formsLoading } = useListForms();
   const { data: summary } = useGetDashboardSummary();
@@ -37,7 +40,7 @@ export default function Dashboard() {
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm("Delete this form and all its responses?")) return;
+    if (!confirm(t(lang, "deleteFormConfirm"))) return;
     deleteForm.mutate(
       { id },
       {
@@ -54,8 +57,8 @@ export default function Dashboard() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Manage your forms and track responses</p>
+            <h1 className="text-2xl font-bold text-foreground">{t(lang, "dashboardTitle")}</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">{t(lang, "dashboardSubtitle")}</p>
           </div>
           <button
             onClick={handleNewForm}
@@ -64,22 +67,24 @@ export default function Dashboard() {
             data-testid="button-create-form"
           >
             <Plus className="w-4 h-4" />
-            {createForm.isPending ? "Creating..." : "New Form"}
+            {createForm.isPending ? t(lang, "creating") : t(lang, "newForm")}
           </button>
         </div>
 
         {/* Stats */}
         {summary && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <StatCard label="Total Forms" value={summary.totalForms} />
-            <StatCard label="Published" value={summary.publishedForms} />
-            <StatCard label="Total Responses" value={summary.totalResponses} />
-            <StatCard label="This Week" value={summary.responsesThisWeek} />
+            <StatCard label={t(lang, "totalForms")} value={summary.totalForms} />
+            <StatCard label={t(lang, "publishedForms")} value={summary.publishedForms} />
+            <StatCard label={t(lang, "totalResponses")} value={summary.totalResponses} />
+            <StatCard label={t(lang, "thisWeek")} value={summary.responsesThisWeek} />
           </div>
         )}
 
         {/* Forms list */}
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Your Forms</h2>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+          {t(lang, "yourForms")}
+        </h2>
 
         {formsLoading ? (
           <div className="space-y-3">
@@ -90,13 +95,13 @@ export default function Dashboard() {
         ) : !forms || forms.length === 0 ? (
           <div className="text-center py-16 border border-dashed border-border rounded-xl">
             <FileText className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground text-sm">No forms yet. Create your first form.</p>
+            <p className="text-muted-foreground text-sm">{t(lang, "noFormsYet")}</p>
             <button
               onClick={handleNewForm}
               className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
               data-testid="button-create-first-form"
             >
-              Create Form
+              {t(lang, "createForm")}
             </button>
           </div>
         ) : (
@@ -119,44 +124,42 @@ export default function Dashboard() {
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium text-foreground truncate">{form.title}</p>
                     {form.isPublished ? (
-                      <Globe className="w-3.5 h-3.5 text-green-500 shrink-0" />
+                      <span className="shrink-0 flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-medium">
+                        <Globe className="w-3 h-3" />
+                        {t(lang, "publishedStatus")}
+                      </span>
                     ) : (
-                      <Lock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      <span className="shrink-0 flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full font-medium">
+                        <Lock className="w-3 h-3" />
+                        {t(lang, "unpublishedStatus")}
+                      </span>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {form.questionCount} question{form.questionCount !== 1 ? "s" : ""} &middot;{" "}
-                    {form.responseCount} response{form.responseCount !== 1 ? "s" : ""} &middot;{" "}
-                    updated {formatDistanceToNow(new Date(form.updatedAt), { addSuffix: true })}
+                    {form.questionCount} {t(lang, "questionsLabel").toLowerCase()} · {form.responseCount} {t(lang, "answersCount")} ·{" "}
+                    {formatDistanceToNow(new Date(form.updatedAt), { addSuffix: true })}
                   </p>
                 </div>
 
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setLocation(`/forms/${form.id}/stats`); }}
-                    className="p-2 rounded-md hover:bg-muted transition-colors"
-                    title="View stats"
-                    data-testid={`button-stats-${form.id}`}
-                  >
-                    <BarChart2 className="w-4 h-4 text-muted-foreground" />
-                  </button>
+                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   {form.isPublished && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); window.open(`/f/${form.id}`, "_blank"); }}
-                      className="p-2 rounded-md hover:bg-muted transition-colors"
-                      title="Open form"
-                      data-testid={`button-open-${form.id}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(`${window.location.origin}${import.meta.env.BASE_URL}f/${form.id}`, "_blank");
+                      }}
+                      className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      data-testid={`button-open-form-${form.id}`}
                     >
-                      <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                      <ExternalLink className="w-4 h-4" />
                     </button>
                   )}
                   <button
                     onClick={(e) => handleDelete(form.id, e)}
-                    className="p-2 rounded-md hover:bg-destructive/10 transition-colors"
-                    title="Delete"
-                    data-testid={`button-delete-${form.id}`}
+                    className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    data-testid={`button-delete-form-${form.id}`}
                   >
-                    <Trash2 className="w-4 h-4 text-destructive/70" />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>

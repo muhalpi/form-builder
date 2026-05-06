@@ -9,6 +9,8 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { FormLayout } from "@/components/layout/FormLayout";
 import { useToast } from "@/hooks/use-toast";
+import { useLang } from "@/contexts/LangContext";
+import { t } from "@/lib/i18n";
 
 const PRESET_COLORS = [
   "#6366f1", "#8b5cf6", "#ec4899", "#f43f5e",
@@ -20,6 +22,7 @@ export default function FormSettings() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { lang } = useLang();
 
   const { data: form } = useGetForm(id, { query: { queryKey: getGetFormQueryKey(id) } });
   const { data: sheetIntegration } = useGetSheetIntegration(id, {
@@ -63,7 +66,7 @@ export default function FormSettings() {
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetFormQueryKey(id) });
-          toast({ title: "Settings saved" });
+          toast({ title: t(lang, "settingsSaved") });
         },
       }
     );
@@ -75,7 +78,7 @@ export default function FormSettings() {
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetFormQueryKey(id) });
-          toast({ title: form?.isPublished ? "Form unpublished" : "Form published" });
+          toast({ title: form?.isPublished ? t(lang, "formUnpublished") : t(lang, "formPublished") });
         },
       }
     );
@@ -83,7 +86,7 @@ export default function FormSettings() {
 
   const handleSaveSheet = () => {
     if (!spreadsheetId || !spreadsheetName || !sheetName) {
-      toast({ title: "Please fill all sheet fields", variant: "destructive" });
+      toast({ title: t(lang, "fillAllSheetFields"), variant: "destructive" });
       return;
     }
     saveSheet.mutate(
@@ -91,7 +94,7 @@ export default function FormSettings() {
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetSheetIntegrationQueryKey(id) });
-          toast({ title: "Sheet integration saved" });
+          toast({ title: t(lang, "sheetIntegrationSaved") });
         },
       }
     );
@@ -106,7 +109,7 @@ export default function FormSettings() {
           toast({ title: result.message });
         },
         onError: () => {
-          toast({ title: "Sync failed. Check integration settings.", variant: "destructive" });
+          toast({ title: t(lang, "syncFailed"), variant: "destructive" });
         },
       }
     );
@@ -122,7 +125,7 @@ export default function FormSettings() {
           setSpreadsheetName("");
           setSheetName("Form Responses");
           setSheetEnabled(true);
-          toast({ title: "Integration removed" });
+          toast({ title: t(lang, "integrationRemoved") });
         },
       }
     );
@@ -139,11 +142,11 @@ export default function FormSettings() {
 
           {/* General */}
           <div className="bg-card border border-card-border rounded-xl p-6">
-            <h3 className="text-sm font-semibold text-foreground mb-4">General</h3>
+            <h3 className="text-sm font-semibold text-foreground mb-4">{t(lang, "general")}</h3>
             <div className="space-y-4">
               <div>
                 <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1.5">
-                  Form Title
+                  {t(lang, "formTitleLabel")}
                 </label>
                 <input
                   type="text"
@@ -155,7 +158,7 @@ export default function FormSettings() {
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1.5">
-                  Description
+                  {t(lang, "descriptionFieldLabel")}
                 </label>
                 <textarea
                   value={description}
@@ -167,7 +170,7 @@ export default function FormSettings() {
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">
-                  Theme Color
+                  {t(lang, "themeColor")}
                 </label>
                 <div className="flex items-center gap-2 flex-wrap">
                   {PRESET_COLORS.map((color) => (
@@ -204,14 +207,14 @@ export default function FormSettings() {
                 className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60"
                 data-testid="button-save-general"
               >
-                {updateForm.isPending ? "Saving..." : "Save Changes"}
+                {updateForm.isPending ? t(lang, "saving") : t(lang, "saveChanges")}
               </button>
             </div>
           </div>
 
           {/* Publish */}
           <div className="bg-card border border-card-border rounded-xl p-6">
-            <h3 className="text-sm font-semibold text-foreground mb-4">Publish</h3>
+            <h3 className="text-sm font-semibold text-foreground mb-4">{t(lang, "publishSection")}</h3>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 {form?.isPublished ? (
@@ -221,10 +224,10 @@ export default function FormSettings() {
                 )}
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    {form?.isPublished ? "Published" : "Unpublished"}
+                    {form?.isPublished ? t(lang, "publishedStatus") : t(lang, "unpublishedStatus")}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {form?.isPublished ? "Your form is live and accepting responses." : "Your form is private."}
+                    {form?.isPublished ? t(lang, "formIsLive") : t(lang, "formIsPrivate")}
                   </p>
                 </div>
               </div>
@@ -238,7 +241,7 @@ export default function FormSettings() {
                 }`}
                 data-testid="button-publish-toggle"
               >
-                {publishForm.isPending ? "..." : form?.isPublished ? "Unpublish" : "Publish"}
+                {publishForm.isPending ? "..." : form?.isPublished ? t(lang, "unpublish") : t(lang, "publishBtn")}
               </button>
             </div>
 
@@ -247,11 +250,11 @@ export default function FormSettings() {
                 <Link2 className="w-4 h-4 text-muted-foreground shrink-0" />
                 <span className="text-xs text-foreground font-mono flex-1 truncate">{formLink}</span>
                 <button
-                  onClick={() => { navigator.clipboard.writeText(formLink); toast({ title: "Link copied!" }); }}
+                  onClick={() => { navigator.clipboard.writeText(formLink); toast({ title: t(lang, "linkCopied") }); }}
                   className="text-xs text-primary hover:underline shrink-0"
                   data-testid="button-copy-link"
                 >
-                  Copy
+                  {t(lang, "copy")}
                 </button>
               </div>
             )}
@@ -266,13 +269,13 @@ export default function FormSettings() {
                   <path d="M7 8h10M7 12h10M7 16h6" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
               </div>
-              <h3 className="text-sm font-semibold text-foreground">Google Sheets Integration</h3>
+              <h3 className="text-sm font-semibold text-foreground">{t(lang, "googleSheets")}</h3>
             </div>
 
             <div className="space-y-3">
               <div>
                 <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1.5">
-                  Spreadsheet ID
+                  {t(lang, "spreadsheetIdLabel")}
                 </label>
                 <input
                   type="text"
@@ -282,11 +285,11 @@ export default function FormSettings() {
                   className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring"
                   data-testid="input-spreadsheet-id"
                 />
-                <p className="text-xs text-muted-foreground mt-1">Found in the Google Sheets URL after /spreadsheets/d/</p>
+                <p className="text-xs text-muted-foreground mt-1">{t(lang, "spreadsheetIdHint")}</p>
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1.5">
-                  Spreadsheet Name
+                  {t(lang, "spreadsheetNameLabel")}
                 </label>
                 <input
                   type="text"
@@ -299,7 +302,7 @@ export default function FormSettings() {
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1.5">
-                  Sheet Name (Tab)
+                  {t(lang, "sheetNameLabel")}
                 </label>
                 <input
                   type="text"
@@ -319,12 +322,12 @@ export default function FormSettings() {
                   className="rounded border-input"
                   data-testid="checkbox-sheet-enabled"
                 />
-                <label htmlFor="sheet-enabled" className="text-sm text-foreground">Enable auto-sync</label>
+                <label htmlFor="sheet-enabled" className="text-sm text-foreground">{t(lang, "enableAutoSync")}</label>
               </div>
 
               {sheetIntegration?.lastSyncedAt && (
                 <p className="text-xs text-muted-foreground">
-                  Last synced: {new Date(sheetIntegration.lastSyncedAt).toLocaleString()}
+                  {t(lang, "lastSynced")} {new Date(sheetIntegration.lastSyncedAt).toLocaleString()}
                 </p>
               )}
 
@@ -335,7 +338,7 @@ export default function FormSettings() {
                   className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60"
                   data-testid="button-save-sheet"
                 >
-                  {saveSheet.isPending ? "Saving..." : "Save Integration"}
+                  {saveSheet.isPending ? t(lang, "saving") : t(lang, "saveIntegration")}
                 </button>
                 {sheetIntegration && (
                   <>
@@ -346,7 +349,7 @@ export default function FormSettings() {
                       data-testid="button-sync-now"
                     >
                       <RefreshCw className={`w-3.5 h-3.5 ${syncSheets.isPending ? "animate-spin" : ""}`} />
-                      {syncSheets.isPending ? "Syncing..." : "Sync Now"}
+                      {syncSheets.isPending ? t(lang, "syncing") : t(lang, "syncNow")}
                     </button>
                     <button
                       onClick={handleRemoveSheet}
@@ -355,7 +358,7 @@ export default function FormSettings() {
                       data-testid="button-remove-sheet"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                      Remove
+                      {t(lang, "remove")}
                     </button>
                   </>
                 )}

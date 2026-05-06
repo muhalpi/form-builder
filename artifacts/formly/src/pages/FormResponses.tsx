@@ -4,8 +4,10 @@ import { ChevronDown, ChevronUp, MessageSquare } from "lucide-react";
 import { useGetForm, useListResponses, getGetFormQueryKey } from "@workspace/api-client-react";
 import { FormLayout } from "@/components/layout/FormLayout";
 import { formatDistanceToNow, format } from "date-fns";
+import { useLang } from "@/contexts/LangContext";
+import { t } from "@/lib/i18n";
 
-function ResponseCard({ response }: { response: any }) {
+function ResponseCard({ response, lang }: { response: any; lang: any }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -17,14 +19,14 @@ function ResponseCard({ response }: { response: any }) {
         <div className="flex items-center gap-3">
           <div className={`w-2 h-2 rounded-full ${response.completed ? "bg-green-500" : "bg-amber-400"}`} />
           <span className="text-sm font-medium text-foreground">
-            Response from {format(new Date(response.submittedAt), "MMM d, yyyy 'at' h:mm a")}
+            {t(lang, "responseFrom")} {format(new Date(response.submittedAt), "MMM d, yyyy 'at' h:mm a")}
           </span>
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${response.completed ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
-            {response.completed ? "Completed" : "Partial"}
+            {response.completed ? t(lang, "completed") : t(lang, "partial")}
           </span>
         </div>
         <div className="flex items-center gap-2 text-muted-foreground">
-          <span className="text-xs">{response.answers?.length || 0} answers</span>
+          <span className="text-xs">{response.answers?.length || 0} {t(lang, "answersCount")}</span>
           {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </div>
       </button>
@@ -34,7 +36,7 @@ function ResponseCard({ response }: { response: any }) {
           {response.answers.map((answer: any) => (
             <div key={answer.id} data-testid={`answer-${answer.id}`}>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">{answer.questionTitle}</p>
-              <p className="text-sm text-foreground">{answer.value || <span className="text-muted-foreground italic">No answer</span>}</p>
+              <p className="text-sm text-foreground">{answer.value || <span className="text-muted-foreground italic">{t(lang, "noAnswer")}</span>}</p>
             </div>
           ))}
         </div>
@@ -46,6 +48,7 @@ function ResponseCard({ response }: { response: any }) {
 export default function FormResponses() {
   const { id } = useParams<{ id: string }>();
   const [page, setPage] = useState(1);
+  const { lang } = useLang();
 
   const { data: form } = useGetForm(id, { query: { queryKey: getGetFormQueryKey(id) } });
   const { data: responsesData, isLoading } = useListResponses(id, { page, limit: 20 });
@@ -55,9 +58,9 @@ export default function FormResponses() {
       <div className="h-full overflow-auto">
         <div className="max-w-3xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-foreground">Responses</h2>
+            <h2 className="text-lg font-semibold text-foreground">{t(lang, "responsesTitle")}</h2>
             {responsesData && (
-              <span className="text-sm text-muted-foreground">{responsesData.total} total</span>
+              <span className="text-sm text-muted-foreground">{responsesData.total} {t(lang, "totalLabel")}</span>
             )}
           </div>
 
@@ -70,18 +73,18 @@ export default function FormResponses() {
           ) : !responsesData?.data || responsesData.data.length === 0 ? (
             <div className="text-center py-16 border border-dashed border-border rounded-xl">
               <MessageSquare className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground text-sm">No responses yet.</p>
+              <p className="text-muted-foreground text-sm">{t(lang, "noResponsesYet")}</p>
               {form?.isPublished ? (
-                <p className="text-xs text-muted-foreground mt-1">Share your form to start collecting responses.</p>
+                <p className="text-xs text-muted-foreground mt-1">{t(lang, "shareToCollect")}</p>
               ) : (
-                <p className="text-xs text-muted-foreground mt-1">Publish your form to start collecting responses.</p>
+                <p className="text-xs text-muted-foreground mt-1">{t(lang, "publishToCollect")}</p>
               )}
             </div>
           ) : (
             <>
               <div className="space-y-3">
                 {responsesData.data.map((response) => (
-                  <ResponseCard key={response.id} response={response} />
+                  <ResponseCard key={response.id} response={response} lang={lang} />
                 ))}
               </div>
 
@@ -92,17 +95,17 @@ export default function FormResponses() {
                     disabled={page === 1}
                     className="px-3 py-1.5 text-sm border border-border rounded-md disabled:opacity-40 hover:bg-muted transition-colors"
                   >
-                    Previous
+                    {t(lang, "previous")}
                   </button>
                   <span className="text-sm text-muted-foreground">
-                    Page {page} of {responsesData.totalPages}
+                    {t(lang, "pageLabel")} {page} {t(lang, "of")} {responsesData.totalPages}
                   </span>
                   <button
                     onClick={() => setPage(p => Math.min(responsesData.totalPages, p + 1))}
                     disabled={page === responsesData.totalPages}
                     className="px-3 py-1.5 text-sm border border-border rounded-md disabled:opacity-40 hover:bg-muted transition-colors"
                   >
-                    Next
+                    {t(lang, "next")}
                   </button>
                 </div>
               )}

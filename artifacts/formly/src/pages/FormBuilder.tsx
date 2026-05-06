@@ -3,7 +3,7 @@ import { useState } from "react";
 import {
   Type, AlignLeft, List, CheckSquare, ChevronDown as DropdownIcon,
   Star, Calendar, Mail, Phone, Hash, ToggleLeft, BarChart2, ArrowUpDown,
-  Plus, GripVertical, Trash2, ChevronDown, ChevronRight, X, Check
+  Plus, GripVertical, Trash2, ChevronDown, ChevronRight, X
 } from "lucide-react";
 import {
   useGetForm, useListQuestions, useCreateQuestion, useUpdateQuestion,
@@ -14,6 +14,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { FormLayout } from "@/components/layout/FormLayout";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useLang } from "@/contexts/LangContext";
+import { t } from "@/lib/i18n";
+import type { Lang } from "@/lib/i18n";
 
 type QuestionType =
   | "short_text" | "long_text"
@@ -23,53 +26,79 @@ type QuestionType =
 
 interface QuestionTypeDef {
   type: QuestionType;
-  label: string;
+  labelKey: keyof ReturnType<typeof buildI18nData>["types"];
+  descKey: keyof ReturnType<typeof buildI18nData>["types"];
   icon: any;
-  description: string;
 }
 
-const QUESTION_CATEGORIES: { label: string; types: QuestionTypeDef[] }[] = [
-  {
-    label: "Text",
-    types: [
-      { type: "long_text", label: "Long Text", icon: AlignLeft, description: "Multi-line" },
-      { type: "short_text", label: "Short Text", icon: Type, description: "Single line" },
+function buildI18nData(lang: Lang) {
+  return {
+    categories: [
+      {
+        labelKey: "catText" as const,
+        types: [
+          { type: "long_text" as QuestionType, labelKey: "typeLongText" as const, descKey: "descMultiLine" as const, icon: AlignLeft },
+          { type: "short_text" as QuestionType, labelKey: "typeShortText" as const, descKey: "descSingleLine" as const, icon: Type },
+        ],
+      },
+      {
+        labelKey: "catChoice" as const,
+        types: [
+          { type: "multiple_choice" as QuestionType, labelKey: "typeMultipleChoice" as const, descKey: "descPickOne" as const, icon: List },
+          { type: "checkbox" as QuestionType, labelKey: "typeCheckbox" as const, descKey: "descPickMany" as const, icon: CheckSquare },
+          { type: "dropdown" as QuestionType, labelKey: "typeDropdown" as const, descKey: "descSelectFromList" as const, icon: DropdownIcon },
+          { type: "yes_no" as QuestionType, labelKey: "typeYesNo" as const, descKey: "descBinaryChoice" as const, icon: ToggleLeft },
+        ],
+      },
+      {
+        labelKey: "catScaleRanking" as const,
+        types: [
+          { type: "opinion_scale" as QuestionType, labelKey: "typeOpinionScale" as const, descKey: "descNumericScale" as const, icon: BarChart2 },
+          { type: "rating" as QuestionType, labelKey: "typeRating" as const, descKey: "descStars" as const, icon: Star },
+          { type: "ranking" as QuestionType, labelKey: "typeRanking" as const, descKey: "descDragToRank" as const, icon: ArrowUpDown },
+        ],
+      },
+      {
+        labelKey: "catContactInfo" as const,
+        types: [
+          { type: "email" as QuestionType, labelKey: "typeEmail" as const, descKey: "descEmailAddress" as const, icon: Mail },
+          { type: "phone" as QuestionType, labelKey: "typePhone" as const, descKey: "descPhoneNumber" as const, icon: Phone },
+        ],
+      },
+      {
+        labelKey: "catOther" as const,
+        types: [
+          { type: "number" as QuestionType, labelKey: "typeNumber" as const, descKey: "descNumericInput" as const, icon: Hash },
+          { type: "date" as QuestionType, labelKey: "typeDate" as const, descKey: "descDatePicker" as const, icon: Calendar },
+        ],
+      },
     ],
-  },
-  {
-    label: "Choice",
-    types: [
-      { type: "multiple_choice", label: "Multiple Choice", icon: List, description: "Pick one" },
-      { type: "checkbox", label: "Checkbox", icon: CheckSquare, description: "Pick many" },
-      { type: "dropdown", label: "Dropdown", icon: DropdownIcon, description: "Select from list" },
-      { type: "yes_no", label: "Yes / No", icon: ToggleLeft, description: "Binary choice" },
-    ],
-  },
-  {
-    label: "Scale & Ranking",
-    types: [
-      { type: "opinion_scale", label: "Opinion Scale", icon: BarChart2, description: "Numeric scale" },
-      { type: "rating", label: "Star Rating", icon: Star, description: "Stars 1–5" },
-      { type: "ranking", label: "Ranking", icon: ArrowUpDown, description: "Drag to rank" },
-    ],
-  },
-  {
-    label: "Contact Info",
-    types: [
-      { type: "email", label: "Email", icon: Mail, description: "Email address" },
-      { type: "phone", label: "Phone", icon: Phone, description: "Phone number" },
-    ],
-  },
-  {
-    label: "Other",
-    types: [
-      { type: "number", label: "Number", icon: Hash, description: "Numeric input" },
-      { type: "date", label: "Date", icon: Calendar, description: "Date picker" },
-    ],
-  },
-];
+    types: {
+      catText: "", catChoice: "", catScaleRanking: "", catContactInfo: "", catOther: "",
+      typeLongText: "", typeShortText: "", typeMultipleChoice: "", typeCheckbox: "",
+      typeDropdown: "", typeYesNo: "", typeOpinionScale: "", typeRating: "", typeRanking: "",
+      typeEmail: "", typePhone: "", typeNumber: "", typeDate: "",
+      descMultiLine: "", descSingleLine: "", descPickOne: "", descPickMany: "",
+      descSelectFromList: "", descBinaryChoice: "", descNumericScale: "", descStars: "",
+      descDragToRank: "", descEmailAddress: "", descPhoneNumber: "", descNumericInput: "", descDatePicker: "",
+    },
+  };
+}
 
-const ALL_TYPES: QuestionTypeDef[] = QUESTION_CATEGORIES.flatMap(c => c.types);
+const TYPE_LABEL_KEYS: Record<string, keyof ReturnType<typeof buildI18nData>["types"]> = {
+  long_text: "typeLongText", short_text: "typeShortText",
+  multiple_choice: "typeMultipleChoice", checkbox: "typeCheckbox",
+  dropdown: "typeDropdown", yes_no: "typeYesNo",
+  opinion_scale: "typeOpinionScale", rating: "typeRating", ranking: "typeRanking",
+  email: "typeEmail", phone: "typePhone", number: "typeNumber", date: "typeDate",
+};
+
+const TYPE_ICON_MAP: Record<string, any> = {
+  long_text: AlignLeft, short_text: Type, multiple_choice: List,
+  checkbox: CheckSquare, dropdown: DropdownIcon, yes_no: ToggleLeft,
+  opinion_scale: BarChart2, rating: Star, ranking: ArrowUpDown,
+  email: Mail, phone: Phone, number: Hash, date: Calendar,
+};
 
 interface Question {
   id: string;
@@ -91,26 +120,18 @@ interface LogicRule {
   jumpToEnd?: boolean;
 }
 
-const CONDITIONS = [
-  { value: "equals", label: "equals" },
-  { value: "not_equals", label: "does not equal" },
-  { value: "contains", label: "contains" },
-  { value: "is_empty", label: "is empty" },
-  { value: "is_not_empty", label: "is not empty" },
-  { value: "greater_than", label: "greater than" },
-  { value: "less_than", label: "less than" },
-];
-
 function QuestionEditor({
   question,
   questions,
   onUpdate,
   onDelete,
+  lang,
 }: {
   question: Question;
   questions: Question[];
   onUpdate: (data: Partial<Question>) => void;
   onDelete: () => void;
+  lang: Lang;
 }) {
   const [localTitle, setLocalTitle] = useState(question.title);
   const [localDesc, setLocalDesc] = useState(question.description ?? "");
@@ -152,7 +173,6 @@ function QuestionEditor({
     setLogic(next); onUpdate({ logic: next });
   };
 
-  // Opinion scale config helpers
   const scaleMin = options[0] ?? "1";
   const scaleMax = options[1] ?? "10";
   const scaleLow = options[2] ?? "";
@@ -163,8 +183,19 @@ function QuestionEditor({
     setOptions(next); onUpdate({ options: next });
   };
 
-  const typeInfo = ALL_TYPES.find(t => t.type === question.type);
-  const TypeIcon = typeInfo?.icon ?? Type;
+  const TypeIcon = TYPE_ICON_MAP[question.type] ?? Type;
+  const typeLabelKey = TYPE_LABEL_KEYS[question.type];
+  const typeLabel = typeLabelKey ? t(lang, typeLabelKey as any) : question.type;
+
+  const CONDITIONS = [
+    { value: "equals", label: t(lang, "condEquals") },
+    { value: "not_equals", label: t(lang, "condNotEquals") },
+    { value: "contains", label: t(lang, "condContains") },
+    { value: "is_empty", label: t(lang, "condIsEmpty") },
+    { value: "is_not_empty", label: t(lang, "condIsNotEmpty") },
+    { value: "greater_than", label: t(lang, "condGreaterThan") },
+    { value: "less_than", label: t(lang, "condLessThan") },
+  ];
 
   return (
     <div className="p-5 space-y-5 max-w-2xl">
@@ -172,7 +203,7 @@ function QuestionEditor({
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
           <TypeIcon className="w-3 h-3" />
-          {typeInfo?.label}
+          {typeLabel}
         </div>
         <button
           onClick={onDelete}
@@ -185,7 +216,9 @@ function QuestionEditor({
 
       {/* Title */}
       <div>
-        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1.5">Question</label>
+        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1.5">
+          {t(lang, "questionFieldLabel")}
+        </label>
         <input
           type="text"
           value={localTitle}
@@ -198,13 +231,15 @@ function QuestionEditor({
 
       {/* Description */}
       <div>
-        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1.5">Description</label>
+        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1.5">
+          {t(lang, "descriptionFieldLabel")}
+        </label>
         <input
           type="text"
           value={localDesc}
           onChange={(e) => setLocalDesc(e.target.value)}
           onBlur={handleBlurDesc}
-          placeholder="Optional hint text..."
+          placeholder={t(lang, "optionalHint")}
           className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           data-testid="input-question-description"
         />
@@ -219,14 +254,14 @@ function QuestionEditor({
         >
           <div className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform", question.required ? "translate-x-4" : "translate-x-0.5")} />
         </button>
-        <span className="text-sm text-foreground">Required</span>
+        <span className="text-sm text-foreground">{t(lang, "requiredLabel")}</span>
       </div>
 
       {/* Options for choice questions */}
       {hasOptions && (
         <div>
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">
-            {question.type === "ranking" ? "Items to rank" : "Options"}
+            {question.type === "ranking" ? t(lang, "itemsToRank") : t(lang, "optionsLabel")}
           </label>
           <div className="space-y-1.5 mb-2">
             {options.map((opt, idx) => (
@@ -245,11 +280,13 @@ function QuestionEditor({
               value={newOption}
               onChange={(e) => setNewOption(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addOption()}
-              placeholder={question.type === "ranking" ? "Add item..." : "Add option..."}
+              placeholder={question.type === "ranking" ? t(lang, "addItemPlaceholder") : t(lang, "addOptionPlaceholder")}
               className="flex-1 px-3 py-1.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               data-testid="input-new-option"
             />
-            <button onClick={addOption} className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-colors" data-testid="button-add-option">Add</button>
+            <button onClick={addOption} className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-colors" data-testid="button-add-option">
+              {t(lang, "addBtn")}
+            </button>
           </div>
         </div>
       )}
@@ -257,10 +294,12 @@ function QuestionEditor({
       {/* Opinion scale settings */}
       {isOpinionScale && (
         <div className="space-y-3">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block">Scale Settings</label>
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block">
+            {t(lang, "scaleSettings")}
+          </label>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-muted-foreground block mb-1">Min value</label>
+              <label className="text-xs text-muted-foreground block mb-1">{t(lang, "minValue")}</label>
               <input
                 type="number"
                 value={scaleMin}
@@ -270,7 +309,7 @@ function QuestionEditor({
               />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground block mb-1">Max value</label>
+              <label className="text-xs text-muted-foreground block mb-1">{t(lang, "maxValue")}</label>
               <input
                 type="number"
                 value={scaleMax}
@@ -280,31 +319,30 @@ function QuestionEditor({
               />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground block mb-1">Low label</label>
+              <label className="text-xs text-muted-foreground block mb-1">{t(lang, "lowLabelField")}</label>
               <input
                 type="text"
                 value={scaleLow}
                 onChange={(e) => updateScaleOptions(scaleMin, scaleMax, e.target.value, scaleHigh)}
-                placeholder="Not likely"
+                placeholder={t(lang, "notLikely")}
                 className="w-full px-3 py-1.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                 data-testid="input-scale-low-label"
               />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground block mb-1">High label</label>
+              <label className="text-xs text-muted-foreground block mb-1">{t(lang, "highLabelField")}</label>
               <input
                 type="text"
                 value={scaleHigh}
                 onChange={(e) => updateScaleOptions(scaleMin, scaleMax, scaleLow, e.target.value)}
-                placeholder="Very likely"
+                placeholder={t(lang, "veryLikely")}
                 className="w-full px-3 py-1.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                 data-testid="input-scale-high-label"
               />
             </div>
           </div>
-          {/* Preview */}
           <div className="p-3 bg-muted/50 rounded-lg">
-            <p className="text-xs text-muted-foreground mb-2">Preview</p>
+            <p className="text-xs text-muted-foreground mb-2">{t(lang, "scalePreview")}</p>
             <div className="flex gap-1.5 flex-wrap">
               {Array.from({ length: parseInt(scaleMax) - parseInt(scaleMin) + 1 }, (_, i) => parseInt(scaleMin) + i).map(n => (
                 <div key={n} className="w-9 h-9 rounded-lg border-2 border-border text-xs font-semibold flex items-center justify-center text-foreground">{n}</div>
@@ -328,7 +366,7 @@ function QuestionEditor({
           data-testid="button-toggle-logic"
         >
           {showLogic ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-          Conditional Logic {logic.length > 0 && `(${logic.length})`}
+          {t(lang, "conditionalLogic")} {logic.length > 0 && `(${logic.length})`}
         </button>
 
         {showLogic && (
@@ -336,7 +374,7 @@ function QuestionEditor({
             {logic.map((rule, idx) => (
               <div key={idx} className="p-3 bg-muted/50 rounded-lg space-y-2">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs text-muted-foreground">If answer</span>
+                  <span className="text-xs text-muted-foreground">{t(lang, "ifAnswer")}</span>
                   <select
                     value={rule.condition}
                     onChange={(e) => updateLogicRule(idx, { condition: e.target.value })}
@@ -350,7 +388,7 @@ function QuestionEditor({
                       type="text"
                       value={rule.value ?? ""}
                       onChange={(e) => updateLogicRule(idx, { value: e.target.value })}
-                      placeholder="value"
+                      placeholder={t(lang, "valuePlaceholder")}
                       className="flex-1 min-w-16 px-2 py-1 rounded-md border border-input bg-background text-xs focus:outline-none"
                       data-testid={`input-condition-value-${idx}`}
                     />
@@ -360,7 +398,7 @@ function QuestionEditor({
                   </button>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Jump to</span>
+                  <span className="text-xs text-muted-foreground">{t(lang, "jumpTo")}</span>
                   <select
                     value={rule.jumpToEnd ? "__end__" : rule.jumpToQuestionId ?? ""}
                     onChange={(e) => {
@@ -370,17 +408,17 @@ function QuestionEditor({
                     className="flex-1 px-2 py-1 rounded-md border border-input bg-background text-xs focus:outline-none"
                     data-testid={`select-jump-${idx}`}
                   >
-                    <option value="">Next question</option>
+                    <option value="">{t(lang, "nextQuestion")}</option>
                     {questions.filter(q => q.id !== question.id).map(q => (
                       <option key={q.id} value={q.id}>Q{q.order + 1}: {q.title.slice(0, 30)}</option>
                     ))}
-                    <option value="__end__">End of form</option>
+                    <option value="__end__">{t(lang, "endOfForm")}</option>
                   </select>
                 </div>
               </div>
             ))}
             <button onClick={addLogicRule} className="text-xs text-primary hover:underline font-medium" data-testid="button-add-logic-rule">
-              + Add rule
+              {t(lang, "addRule")}
             </button>
           </div>
         )}
@@ -393,6 +431,7 @@ export default function FormBuilder() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { lang } = useLang();
 
   const { data: form } = useGetForm(id, { query: { queryKey: getGetFormQueryKey(id) } });
   const { data: questionsData, isLoading } = useListQuestions(id, { query: { queryKey: getListQuestionsQueryKey(id) } });
@@ -414,18 +453,19 @@ export default function FormBuilder() {
   const getDefaultOptions = (type: QuestionType): string[] | undefined => {
     if (["multiple_choice", "checkbox", "dropdown"].includes(type)) return ["Option 1", "Option 2", "Option 3"];
     if (type === "ranking") return ["Item 1", "Item 2", "Item 3"];
-    if (type === "opinion_scale") return ["1", "10", "Not likely", "Very likely"];
+    if (type === "opinion_scale") return ["1", "10", t(lang, "notLikely"), t(lang, "veryLikely")];
     return undefined;
   };
 
   const handleAddQuestion = (type: QuestionType) => {
-    const typeInfo = ALL_TYPES.find(t => t.type === type);
+    const labelKey = TYPE_LABEL_KEYS[type];
+    const typeLabel = labelKey ? t(lang, labelKey as any) : type;
     createQuestion.mutate(
       {
         id,
         data: {
           type: type as any,
-          title: `New ${typeInfo?.label ?? "Question"}`,
+          title: `New ${typeLabel}`,
           required: false,
           options: getDefaultOptions(type),
         },
@@ -447,7 +487,7 @@ export default function FormBuilder() {
   };
 
   const handleDelete = (questionId: string) => {
-    if (!confirm("Delete this question?")) return;
+    if (!confirm(t(lang, "deleteQuestionConfirm"))) return;
     deleteQuestion.mutate(
       { formId: id, questionId },
       {
@@ -479,6 +519,47 @@ export default function FormBuilder() {
     setDraggingId(null); setDragOverId(null);
   };
 
+  const QUESTION_CATEGORIES = [
+    {
+      label: t(lang, "catText"),
+      types: [
+        { type: "long_text" as QuestionType, label: t(lang, "typeLongText"), icon: AlignLeft },
+        { type: "short_text" as QuestionType, label: t(lang, "typeShortText"), icon: Type },
+      ],
+    },
+    {
+      label: t(lang, "catChoice"),
+      types: [
+        { type: "multiple_choice" as QuestionType, label: t(lang, "typeMultipleChoice"), icon: List },
+        { type: "checkbox" as QuestionType, label: t(lang, "typeCheckbox"), icon: CheckSquare },
+        { type: "dropdown" as QuestionType, label: t(lang, "typeDropdown"), icon: DropdownIcon },
+        { type: "yes_no" as QuestionType, label: t(lang, "typeYesNo"), icon: ToggleLeft },
+      ],
+    },
+    {
+      label: t(lang, "catScaleRanking"),
+      types: [
+        { type: "opinion_scale" as QuestionType, label: t(lang, "typeOpinionScale"), icon: BarChart2 },
+        { type: "rating" as QuestionType, label: t(lang, "typeRating"), icon: Star },
+        { type: "ranking" as QuestionType, label: t(lang, "typeRanking"), icon: ArrowUpDown },
+      ],
+    },
+    {
+      label: t(lang, "catContactInfo"),
+      types: [
+        { type: "email" as QuestionType, label: t(lang, "typeEmail"), icon: Mail },
+        { type: "phone" as QuestionType, label: t(lang, "typePhone"), icon: Phone },
+      ],
+    },
+    {
+      label: t(lang, "catOther"),
+      types: [
+        { type: "number" as QuestionType, label: t(lang, "typeNumber"), icon: Hash },
+        { type: "date" as QuestionType, label: t(lang, "typeDate"), icon: Calendar },
+      ],
+    },
+  ];
+
   return (
     <FormLayout formId={id} formTitle={form?.title}>
       <div className="flex h-full overflow-hidden">
@@ -487,7 +568,7 @@ export default function FormBuilder() {
           {/* Question list */}
           <div className="flex-1 overflow-auto p-3 space-y-1">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 mb-2">
-              Questions {sortedQuestions.length > 0 && `(${sortedQuestions.length})`}
+              {t(lang, "questionsLabel")} {sortedQuestions.length > 0 && `(${sortedQuestions.length})`}
             </p>
 
             {isLoading ? (
@@ -496,11 +577,11 @@ export default function FormBuilder() {
               </div>
             ) : sortedQuestions.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground text-xs px-4">
-                Pick a question type below to get started
+                {t(lang, "pickTypeHint")}
               </div>
             ) : (
               sortedQuestions.map((q, idx) => {
-                const TypeIcon = ALL_TYPES.find(t => t.type === q.type)?.icon ?? Type;
+                const TypeIcon = TYPE_ICON_MAP[q.type] ?? Type;
                 return (
                   <div
                     key={q.id}
@@ -531,7 +612,9 @@ export default function FormBuilder() {
 
           {/* ── Categorized question type picker ─────────────── */}
           <div className="border-t border-border overflow-auto max-h-64 p-3 space-y-3">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Add Question</p>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              {t(lang, "addQuestion")}
+            </p>
             {QUESTION_CATEGORIES.map(cat => (
               <div key={cat.label}>
                 <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-1 px-1">{cat.label}</p>
@@ -563,6 +646,7 @@ export default function FormBuilder() {
               questions={sortedQuestions}
               onUpdate={(data) => handleUpdate(selectedQuestion.id, data)}
               onDelete={() => handleDelete(selectedQuestion.id)}
+              lang={lang}
             />
           ) : (
             <div className="h-full flex items-center justify-center text-center p-8">
@@ -570,8 +654,8 @@ export default function FormBuilder() {
                 <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mx-auto mb-4">
                   <Plus className="w-6 h-6 text-muted-foreground" />
                 </div>
-                <p className="text-sm font-medium text-foreground mb-1">No question selected</p>
-                <p className="text-xs text-muted-foreground">Select a question on the left or add one.</p>
+                <p className="text-sm font-medium text-foreground mb-1">{t(lang, "noQuestionSelected")}</p>
+                <p className="text-xs text-muted-foreground">{t(lang, "selectQuestionHint")}</p>
               </div>
             </div>
           )}

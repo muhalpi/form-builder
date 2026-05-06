@@ -4,6 +4,8 @@ import { useGetForm, useGetFormStats, getGetFormQueryKey, getGetFormStatsQueryKe
 import { FormLayout } from "@/components/layout/FormLayout";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from "recharts";
 import { format, parseISO } from "date-fns";
+import { useLang } from "@/contexts/LangContext";
+import { t } from "@/lib/i18n";
 
 function StatCard({ icon: Icon, label, value, sub }: { icon: any; label: string; value: string | number; sub?: string }) {
   return (
@@ -22,6 +24,7 @@ function StatCard({ icon: Icon, label, value, sub }: { icon: any; label: string;
 
 export default function FormStats() {
   const { id } = useParams<{ id: string }>();
+  const { lang } = useLang();
 
   const { data: form } = useGetForm(id, { query: { queryKey: getGetFormQueryKey(id) } });
   const { data: stats, isLoading } = useGetFormStats(id, { query: { queryKey: getGetFormStatsQueryKey(id) } });
@@ -30,7 +33,7 @@ export default function FormStats() {
     <FormLayout formId={id} formTitle={form?.title}>
       <div className="h-full overflow-auto">
         <div className="max-w-4xl mx-auto px-6 py-6">
-          <h2 className="text-lg font-semibold text-foreground mb-6">Analytics</h2>
+          <h2 className="text-lg font-semibold text-foreground mb-6">{t(lang, "analyticsTitle")}</h2>
 
           {isLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -41,21 +44,21 @@ export default function FormStats() {
           ) : !stats ? (
             <div className="text-center py-16 border border-dashed border-border rounded-xl">
               <BarChart2 className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground text-sm">No data available yet.</p>
+              <p className="text-muted-foreground text-sm">{t(lang, "noDataYet")}</p>
             </div>
           ) : (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <StatCard icon={Users} label="Total Responses" value={stats.totalResponses} />
-                <StatCard icon={CheckCircle2} label="Completed" value={stats.completedResponses} />
+                <StatCard icon={Users} label={t(lang, "totalResponses")} value={stats.totalResponses} />
+                <StatCard icon={CheckCircle2} label={t(lang, "completedLabel")} value={stats.completedResponses} />
                 <StatCard
                   icon={TrendingUp}
-                  label="Completion Rate"
+                  label={t(lang, "completionRate")}
                   value={`${Math.round(stats.completionRate * 100)}%`}
                 />
                 <StatCard
                   icon={BarChart2}
-                  label="Questions"
+                  label={t(lang, "questionsStatLabel")}
                   value={stats.questionStats.length}
                 />
               </div>
@@ -63,7 +66,7 @@ export default function FormStats() {
               {/* Responses over time */}
               {stats.responsesPerDay.length > 0 && (
                 <div className="bg-card border border-card-border rounded-xl p-5 mb-6">
-                  <h3 className="text-sm font-semibold text-foreground mb-4">Responses over last 30 days</h3>
+                  <h3 className="text-sm font-semibold text-foreground mb-4">{t(lang, "responsesOverTime")}</h3>
                   <ResponsiveContainer width="100%" height={180}>
                     <LineChart data={stats.responsesPerDay.map((d) => ({ ...d, date: format(parseISO(d.date), "MMM d") }))}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -93,7 +96,7 @@ export default function FormStats() {
               {/* Question stats */}
               {stats.questionStats.length > 0 && (
                 <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-foreground">Question Breakdown</h3>
+                  <h3 className="text-sm font-semibold text-foreground">{t(lang, "questionBreakdown")}</h3>
                   {stats.questionStats.map((qStat) => (
                     <div key={qStat.questionId} className="bg-card border border-card-border rounded-xl p-5">
                       <div className="flex items-start justify-between mb-3">
@@ -101,7 +104,7 @@ export default function FormStats() {
                           <p className="text-sm font-medium text-foreground">{qStat.questionTitle}</p>
                           <p className="text-xs text-muted-foreground capitalize">{qStat.type.replace("_", " ")}</p>
                         </div>
-                        <span className="text-xs text-muted-foreground">{qStat.answerCount} answers</span>
+                        <span className="text-xs text-muted-foreground">{qStat.answerCount} {t(lang, "answersCount")}</span>
                       </div>
 
                       {qStat.topAnswers.length > 0 && (
