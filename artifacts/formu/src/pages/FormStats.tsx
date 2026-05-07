@@ -30,7 +30,12 @@ export default function FormStats() {
   const { data: stats, isLoading } = useGetFormStats(id, { query: { queryKey: getGetFormStatsQueryKey(id) } });
 
   return (
-    <FormLayout formId={id} formTitle={form?.title}>
+    <FormLayout
+      formId={id}
+      formTitle={form?.title}
+      formResponseCount={form?.responseCount}
+      formIsPublished={form?.isPublished}
+    >
       <div className="h-full overflow-auto">
         <div className="max-w-4xl mx-auto px-6 py-6">
           <h2 className="text-lg font-semibold text-foreground mb-6">{t(lang, "analyticsTitle")}</h2>

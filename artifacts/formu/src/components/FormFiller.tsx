@@ -445,6 +445,7 @@ export default function FormFiller({ form, previewMode }: FormFillerProps) {
 
   const currentQuestion = sortedQuestions[currentIndex];
   const progress = sortedQuestions.length > 0 ? (currentIndex / sortedQuestions.length) * 100 : 0;
+  const isLongTextQuestion = currentQuestion?.type === "long_text";
 
   const handleNext = useCallback(() => {
     if (!currentQuestion) return;
@@ -473,6 +474,19 @@ export default function FormFiller({ form, previewMode }: FormFillerProps) {
   const handleBack = () => {
     if (currentIndex > 0) { setDirection(-1); setCurrentIndex(i => i - 1); }
   };
+
+  const handleQuestionKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+
+    if (isLongTextQuestion) {
+      if (!(e.ctrlKey || e.metaKey)) return;
+    } else if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) {
+      return;
+    }
+
+    e.preventDefault();
+    handleNext();
+  }, [handleNext, isLongTextQuestion]);
 
   const handleSubmit = () => {
     if (previewMode) { setSubmitted(true); return; }
@@ -565,12 +579,14 @@ export default function FormFiller({ form, previewMode }: FormFillerProps) {
               </div>
 
               {currentQuestion && (
-                <QuestionInput
-                  question={currentQuestion}
-                  value={answers[currentQuestion.id] ?? ""}
-                  onChange={(v) => setAnswers(prev => ({ ...prev, [currentQuestion.id]: v }))}
-                  themeColor={form.themeColor}
-                />
+                <div onKeyDown={handleQuestionKeyDown}>
+                  <QuestionInput
+                    question={currentQuestion}
+                    value={answers[currentQuestion.id] ?? ""}
+                    onChange={(v) => setAnswers(prev => ({ ...prev, [currentQuestion.id]: v }))}
+                    themeColor={form.themeColor}
+                  />
+                </div>
               )}
             </motion.div>
           </AnimatePresence>
@@ -602,7 +618,9 @@ export default function FormFiller({ form, previewMode }: FormFillerProps) {
               </button>
             )}
 
-            <span className="text-xs text-muted-foreground ml-1">{t(lang, "pressEnter")}</span>
+            <span className="text-xs text-muted-foreground ml-1">
+              {isLongTextQuestion ? t(lang, "pressCtrlEnter") : t(lang, "pressEnter")}
+            </span>
           </div>
         </div>
       </div>

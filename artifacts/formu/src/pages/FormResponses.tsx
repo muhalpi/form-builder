@@ -82,7 +82,12 @@ export default function FormResponses() {
   const hasResponses = responsesData && responsesData.total > 0;
 
   return (
-    <FormLayout formId={id} formTitle={form?.title}>
+    <FormLayout
+      formId={id}
+      formTitle={form?.title}
+      formResponseCount={form?.responseCount}
+      formIsPublished={form?.isPublished}
+    >
       <div className="h-full overflow-auto">
         <div className="max-w-3xl mx-auto px-6 py-6">
           {/* Header */}

@@ -3,7 +3,7 @@ import { useState } from "react";
 import {
   Type, AlignLeft, List, CheckSquare, ChevronDown as DropdownIcon,
   Star, Calendar, Mail, Phone, Hash, ToggleLeft, BarChart2, ArrowUpDown,
-  Plus, GripVertical, Trash2, ChevronDown, ChevronRight, X
+  Plus, GripVertical, Trash2, ChevronDown, ChevronRight, X, Ellipsis, Copy
 } from "lucide-react";
 import {
   useGetForm, useListQuestions, useCreateQuestion, useUpdateQuestion,
@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils";
 import { useLang } from "@/contexts/LangContext";
 import { t } from "@/lib/i18n";
 import type { Lang } from "@/lib/i18n";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 type QuestionType =
   | "short_text" | "long_text"
@@ -99,6 +101,37 @@ const TYPE_ICON_MAP: Record<string, any> = {
   opinion_scale: BarChart2, rating: Star, ranking: ArrowUpDown,
   email: Mail, phone: Phone, number: Hash, date: Calendar,
 };
+
+function buildAutoQuestionTitles(questionType: string): string[] {
+  const typeLabelKey = TYPE_LABEL_KEYS[questionType];
+  if (!typeLabelKey) return [];
+
+  const enTypeLabel = t("en", typeLabelKey as any);
+  const idTypeLabel = t("id", typeLabelKey as any);
+  const enPrefix = t("en", "newQuestionPrefix");
+  const idPrefix = t("id", "newQuestionPrefix");
+
+  return [
+    `${enPrefix} ${enTypeLabel}`,
+    `${enPrefix} ${idTypeLabel}`,
+    `${idPrefix} ${enTypeLabel}`,
+    `${idPrefix} ${idTypeLabel}`,
+    `New ${enTypeLabel}`,
+    `New ${idTypeLabel}`,
+    `Baru ${enTypeLabel}`,
+    `Baru ${idTypeLabel}`,
+  ];
+}
+
+function getDisplayQuestionTitle(question: { title: string; type: string }, lang: Lang): string {
+  const autoTitles = buildAutoQuestionTitles(question.type).map((x) => x.trim());
+  const currentTitle = question.title.trim();
+  if (!autoTitles.includes(currentTitle)) return question.title;
+
+  const typeLabelKey = TYPE_LABEL_KEYS[question.type];
+  if (!typeLabelKey) return question.title;
+  return `${t(lang, "newQuestionPrefix")} ${t(lang, typeLabelKey as any)}`;
+}
 
 interface Question {
   id: string;
@@ -447,6 +480,8 @@ export default function FormBuilder() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [isAddQuestionDialogOpen, setIsAddQuestionDialogOpen] = useState(false);
+  const [duplicatingQuestionId, setDuplicatingQuestionId] = useState<string | null>(null);
 
   const selectedQuestion = sortedQuestions.find(q => q.id === selectedId) ?? null;
 
@@ -465,7 +500,7 @@ export default function FormBuilder() {
         id,
         data: {
           type: type as any,
-          title: `New ${typeLabel}`,
+          title: `${t(lang, "newQuestionPrefix")} ${typeLabel}`,
           required: false,
           options: getDefaultOptions(type),
         },
@@ -474,6 +509,7 @@ export default function FormBuilder() {
         onSuccess: (q) => {
           queryClient.invalidateQueries({ queryKey: getListQuestionsQueryKey(id) });
           setSelectedId(q.id);
+          setIsAddQuestionDialogOpen(false);
         },
       }
     );
@@ -494,6 +530,34 @@ export default function FormBuilder() {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListQuestionsQueryKey(id) });
           if (selectedId === questionId) setSelectedId(null);
+        },
+      }
+    );
+  };
+
+  const handleDuplicateQuestion = (question: Question) => {
+    const duplicateData: any = {
+      type: question.type as any,
+      title: `${question.title} (${t(lang, "duplicateAction")})`,
+      required: question.required,
+      options: question.options ? [...question.options] : undefined,
+      logic: question.logic ? question.logic.map((rule) => ({ ...rule })) : undefined,
+    };
+
+    if (question.description) {
+      duplicateData.description = question.description;
+    }
+
+    setDuplicatingQuestionId(question.id);
+    createQuestion.mutate(
+      { id, data: duplicateData },
+      {
+        onSuccess: (created) => {
+          queryClient.invalidateQueries({ queryKey: getListQuestionsQueryKey(id) });
+          setSelectedId(created.id);
+        },
+        onSettled: () => {
+          setDuplicatingQuestionId(null);
         },
       }
     );
@@ -561,7 +625,12 @@ export default function FormBuilder() {
   ];
 
   return (
-    <FormLayout formId={id} formTitle={form?.title}>
+    <FormLayout
+      formId={id}
+      formTitle={form?.title}
+      formResponseCount={form?.responseCount}
+      formIsPublished={form?.isPublished}
+    >
       <div className="flex h-full overflow-hidden">
         {/* ── Left Panel ─────────────────────────────────────── */}
         <div className="w-72 flex-shrink-0 border-r border-border flex flex-col bg-sidebar overflow-hidden">
@@ -602,8 +671,46 @@ export default function FormBuilder() {
                     <GripVertical className="w-3.5 h-3.5 text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100 cursor-grab" />
                     <span className="w-5 text-center text-xs font-semibold text-muted-foreground shrink-0">{idx + 1}</span>
                     <TypeIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                    <span className="text-sm font-medium truncate flex-1">{q.title}</span>
-                    {q.required && <span className="text-primary text-xs shrink-0">*</span>}
+                    <span className="text-xs leading-4 font-medium truncate flex-1">{getDisplayQuestionTitle(q, lang)}</span>
+                    {q.required && <span className="text-primary text-[11px] shrink-0">*</span>}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onClick={(e) => e.stopPropagation()}
+                          className={cn(
+                            "w-6 h-6 rounded-md inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors",
+                            selectedId === q.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                          )}
+                          data-testid={`button-question-menu-${q.id}`}
+                        >
+                          <Ellipsis className="w-3.5 h-3.5" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="end"
+                        className="w-44 rounded-2xl p-1.5"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <DropdownMenuItem
+                          onClick={() => handleDuplicateQuestion(q)}
+                          disabled={createQuestion.isPending && duplicatingQuestionId === q.id}
+                          className="h-10 rounded-xl text-sm"
+                          data-testid={`menu-question-duplicate-${q.id}`}
+                        >
+                          <Copy className="w-4 h-4" />
+                          {t(lang, "duplicateAction")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDelete(q.id)}
+                          className="h-10 rounded-xl text-sm text-destructive focus:text-destructive"
+                          data-testid={`menu-question-delete-${q.id}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          {t(lang, "deleteAction")}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 );
               })
@@ -611,29 +718,16 @@ export default function FormBuilder() {
           </div>
 
           {/* ── Categorized question type picker ─────────────── */}
-          <div className="border-t border-border overflow-auto max-h-64 p-3 space-y-3">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <div className="border-t border-border p-3">
+            <button
+              onClick={() => setIsAddQuestionDialogOpen(true)}
+              disabled={createQuestion.isPending}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60"
+              data-testid="button-open-add-question-dialog"
+            >
+              <Plus className="w-4 h-4" />
               {t(lang, "addQuestion")}
-            </p>
-            {QUESTION_CATEGORIES.map(cat => (
-              <div key={cat.label}>
-                <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-1 px-1">{cat.label}</p>
-                <div className="grid grid-cols-2 gap-0.5">
-                  {cat.types.map(({ type, label, icon: Icon }) => (
-                    <button
-                      key={type}
-                      onClick={() => handleAddQuestion(type)}
-                      disabled={createQuestion.isPending}
-                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-accent text-xs text-muted-foreground hover:text-accent-foreground transition-colors text-left disabled:opacity-50"
-                      data-testid={`add-question-${type}`}
-                    >
-                      <Icon className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate">{label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
+            </button>
           </div>
         </div>
 
@@ -661,6 +755,39 @@ export default function FormBuilder() {
           )}
         </div>
       </div>
+
+      <Dialog open={isAddQuestionDialogOpen} onOpenChange={setIsAddQuestionDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{t(lang, "addQuestion")}</DialogTitle>
+            <DialogDescription>{t(lang, "pickTypeHint")}</DialogDescription>
+          </DialogHeader>
+
+          <div className="max-h-[60vh] overflow-auto pr-1 space-y-4">
+            {QUESTION_CATEGORIES.map((cat) => (
+              <div key={cat.label}>
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  {cat.label}
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {cat.types.map(({ type, label, icon: Icon }) => (
+                    <button
+                      key={type}
+                      onClick={() => handleAddQuestion(type)}
+                      disabled={createQuestion.isPending}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card hover:bg-muted text-sm text-left transition-colors disabled:opacity-50"
+                      data-testid={`add-question-${type}`}
+                    >
+                      <Icon className="w-4 h-4 shrink-0 text-muted-foreground" />
+                      <span className="truncate">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </FormLayout>
   );
 }
