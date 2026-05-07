@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { and, count, db, eq, inArray, responsesTable, answersTable, questionsTable, formsTable, sql } from "@workspace/db";
+import { createHash, randomUUID } from "node:crypto";
 import {
   ListResponsesParams,
   ListResponsesQueryParams,
@@ -10,6 +11,33 @@ import {
 import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
+const RESPONDENT_COOKIE_PREFIX = "formu_respondent_";
+const RESPONDENT_COOKIE_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 365;
+const RESPONDENT_DUPLICATE_ERROR = "Response already submitted for this form";
+const RESPONDENT_UNIQUE_CONSTRAINT = "responses_form_respondent_hash_unique";
+
+function getRespondentCookieName(formId: string): string {
+  return `${RESPONDENT_COOKIE_PREFIX}${formId}`;
+}
+
+function resolveRespondentToken(rawCookie: unknown): { token: string; isNew: boolean } {
+  if (typeof rawCookie === "string" && rawCookie.trim().length > 0) {
+    return { token: rawCookie.trim(), isNew: false };
+  }
+
+  return { token: randomUUID(), isNew: true };
+}
+
+function hashRespondentToken(formId: string, token: string): string {
+  return createHash("sha256").update(`${formId}:${token}`).digest("hex");
+}
+
+function isUniqueConstraintViolation(error: unknown, constraintName: string): boolean {
+  if (!error || typeof error !== "object") return false;
+  const code = (error as { code?: string }).code;
+  const constraint = (error as { constraint?: string }).constraint;
+  return code === "23505" && constraint === constraintName;
+}
 
 async function getOwnedFormId(id: string, userId: string) {
   const [form] = await db
@@ -118,6 +146,35 @@ router.post("/forms/:id/responses", async (req, res): Promise<void> => {
     return;
   }
 
+  const respondentCookieName = getRespondentCookieName(params.data.id);
+  const respondentToken = resolveRespondentToken(req.cookies?.[respondentCookieName]);
+  const respondentHash = hashRespondentToken(params.data.id, respondentToken.token);
+
+  const [existingResponse] = await db
+    .select({ id: responsesTable.id })
+    .from(responsesTable)
+    .where(
+      and(
+        eq(responsesTable.formId, params.data.id),
+        eq(responsesTable.respondentHash, respondentHash),
+      ),
+    );
+
+  if (existingResponse) {
+    if (respondentToken.isNew) {
+      res.cookie(respondentCookieName, respondentToken.token, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: RESPONDENT_COOKIE_MAX_AGE_MS,
+      });
+    }
+
+    res.status(409).json({ error: RESPONDENT_DUPLICATE_ERROR });
+    return;
+  }
+
   const questions = await db
     .select()
     .from(questionsTable)
@@ -131,10 +188,21 @@ router.post("/forms/:id/responses", async (req, res): Promise<void> => {
     return;
   }
 
-  const [response] = await db.insert(responsesTable).values({
-    formId: params.data.id,
-    completed: parsed.data.completed ?? true,
-  }).returning();
+  let response: typeof responsesTable.$inferSelect;
+  try {
+    [response] = await db.insert(responsesTable).values({
+      formId: params.data.id,
+      respondentHash,
+      completed: parsed.data.completed ?? true,
+    }).returning();
+  } catch (error) {
+    if (isUniqueConstraintViolation(error, RESPONDENT_UNIQUE_CONSTRAINT)) {
+      res.status(409).json({ error: RESPONDENT_DUPLICATE_ERROR });
+      return;
+    }
+
+    throw error;
+  }
 
   if (parsed.data.answers && parsed.data.answers.length > 0) {
     await db.insert(answersTable).values(
@@ -145,6 +213,16 @@ router.post("/forms/:id/responses", async (req, res): Promise<void> => {
         value: a.value ?? null,
       }))
     );
+  }
+
+  if (respondentToken.isNew) {
+    res.cookie(respondentCookieName, respondentToken.token, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: RESPONDENT_COOKIE_MAX_AGE_MS,
+    });
   }
 
   res.status(201).json(response);
