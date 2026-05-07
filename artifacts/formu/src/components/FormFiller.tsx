@@ -38,6 +38,7 @@ interface FormFillerProps {
 }
 
 const RESPONDENT_TOKEN_STORAGE_PREFIX = "formu_respondent_token_";
+const RESPONDENT_TOKEN_HEADER_NAME = "x-respondent-token";
 
 function getRespondentTokenStorageKey(formId: string): string {
   return `${RESPONDENT_TOKEN_STORAGE_PREFIX}${formId}`;
@@ -64,6 +65,36 @@ function getOrCreateRespondentToken(formId: string): string {
   const token = generateRespondentToken();
   window.localStorage.setItem(storageKey, token);
   return token;
+}
+
+function getApiBaseUrl(): string {
+  const rawApiUrl = import.meta.env.VITE_API_URL as string | undefined;
+  if (!rawApiUrl) {
+    return "";
+  }
+
+  const normalized = rawApiUrl.replace(/\/+$/, "");
+  return normalized.endsWith("/api") ? normalized : `${normalized}/api`;
+}
+
+async function checkRespondentAlreadySubmitted(formId: string, respondentToken: string): Promise<boolean> {
+  const apiBaseUrl = getApiBaseUrl();
+  const path = `/public/forms/${formId}/respondent-status`;
+  const url = apiBaseUrl ? `${apiBaseUrl}${path}` : `/api${path}`;
+  const response = await fetch(url, {
+    method: "GET",
+    credentials: "include",
+    headers: {
+      [RESPONDENT_TOKEN_HEADER_NAME]: respondentToken,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to check respondent status");
+  }
+
+  const data = await response.json() as { alreadySubmitted?: boolean };
+  return data.alreadySubmitted === true;
 }
 
 function applyLogic(question: Question, answer: string, questions: Question[]): string | null {
@@ -403,7 +434,7 @@ function QuestionInput({
 }
 
 // ─── Welcome Screen ───────────────────────────────────────────────────────────
-function WelcomeScreen({ form, onStart }: { form: Form; onStart: () => void }) {
+function WelcomeScreen({ form, onStart, isStarting }: { form: Form; onStart: () => void; isStarting: boolean }) {
   const { lang } = useLang();
 
   return (
@@ -434,7 +465,8 @@ function WelcomeScreen({ form, onStart }: { form: Form; onStart: () => void }) {
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.97 }}
             onClick={onStart}
-            className="px-10 py-4 rounded-2xl text-lg font-semibold text-white shadow-lg hover:shadow-xl transition-shadow"
+            disabled={isStarting}
+            className="px-10 py-4 rounded-2xl text-lg font-semibold text-white shadow-lg hover:shadow-xl transition-shadow disabled:opacity-60"
             style={{ backgroundColor: form.themeColor }}
             data-testid="button-start"
           >
@@ -470,6 +502,7 @@ export default function FormFiller({ form, previewMode }: FormFillerProps) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [direction, setDirection] = useState(1);
   const [submitted, setSubmitted] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
   const submitResponse = useSubmitResponse({
     request: {
       headers: {
@@ -546,8 +579,32 @@ export default function FormFiller({ form, previewMode }: FormFillerProps) {
     );
   };
 
+  const handleStart = useCallback(async () => {
+    if (isStarting) return;
+
+    if (previewMode) {
+      setStarted(true);
+      return;
+    }
+
+    setIsStarting(true);
+    try {
+      const alreadySubmitted = await checkRespondentAlreadySubmitted(form.id, respondentToken);
+      if (alreadySubmitted) {
+        toast({ title: t(lang, "responseAlreadySubmitted"), variant: "destructive" });
+        return;
+      }
+
+      setStarted(true);
+    } catch {
+      setStarted(true);
+    } finally {
+      setIsStarting(false);
+    }
+  }, [form.id, isStarting, lang, previewMode, respondentToken, toast]);
+
   if (!started) {
-    return <WelcomeScreen form={form} onStart={() => setStarted(true)} />;
+    return <WelcomeScreen form={form} onStart={() => { void handleStart(); }} isStarting={isStarting} />;
   }
 
   if (submitted) {

@@ -86,6 +86,20 @@ async function getOwnedFormId(id: string, userId: string) {
   return form;
 }
 
+async function hasExistingRespondentResponse(formId: string, respondentHash: string): Promise<boolean> {
+  const [existingResponse] = await db
+    .select({ id: responsesTable.id })
+    .from(responsesTable)
+    .where(
+      and(
+        eq(responsesTable.formId, formId),
+        eq(responsesTable.respondentHash, respondentHash),
+      ),
+    );
+
+  return Boolean(existingResponse);
+}
+
 // GET /forms/:id/responses
 router.get("/forms/:id/responses", requireAuth, async (req, res): Promise<void> => {
   const params = ListResponsesParams.safeParse(req.params);
@@ -159,6 +173,36 @@ router.get("/forms/:id/responses", requireAuth, async (req, res): Promise<void> 
   });
 });
 
+// GET /public/forms/:id/respondent-status
+router.get("/public/forms/:id/respondent-status", async (req, res): Promise<void> => {
+  const params = SubmitResponseParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const [form] = await db.select().from(formsTable).where(eq(formsTable.id, params.data.id));
+  if (!form || !form.isPublished) {
+    res.status(404).json({ error: "Form not found" });
+    return;
+  }
+
+  const respondentCookieName = getRespondentCookieName(params.data.id);
+  const respondentToken = resolveRespondentToken(
+    req.cookies?.[respondentCookieName],
+    req.headers[RESPONDENT_HEADER_NAME],
+  );
+  const respondentHash = hashRespondentToken(params.data.id, respondentToken.token);
+  const alreadySubmitted = await hasExistingRespondentResponse(params.data.id, respondentHash);
+
+  if (respondentToken.shouldSetCookie) {
+    res.cookie(respondentCookieName, respondentToken.token, getRespondentCookieOptions());
+  }
+
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ alreadySubmitted });
+});
+
 // POST /forms/:id/responses
 router.post("/forms/:id/responses", async (req, res): Promise<void> => {
   const params = SubmitResponseParams.safeParse(req.params);
@@ -191,17 +235,9 @@ router.post("/forms/:id/responses", async (req, res): Promise<void> => {
   );
   const respondentHash = hashRespondentToken(params.data.id, respondentToken.token);
 
-  const [existingResponse] = await db
-    .select({ id: responsesTable.id })
-    .from(responsesTable)
-    .where(
-      and(
-        eq(responsesTable.formId, params.data.id),
-        eq(responsesTable.respondentHash, respondentHash),
-      ),
-    );
+  const alreadySubmitted = await hasExistingRespondentResponse(params.data.id, respondentHash);
 
-  if (existingResponse) {
+  if (alreadySubmitted) {
     if (respondentToken.shouldSetCookie) {
       res.cookie(respondentCookieName, respondentToken.token, getRespondentCookieOptions());
     }
