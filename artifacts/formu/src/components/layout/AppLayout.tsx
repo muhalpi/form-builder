@@ -30,7 +30,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   };
 
   const nav = [
-    { href: "/", icon: LayoutDashboard, label: t(lang, "dashboardNav") },
+    { href: "/dashboard", icon: LayoutDashboard, label: t(lang, "dashboardNav") },
   ];
 
   const handleSignOut = async () => {

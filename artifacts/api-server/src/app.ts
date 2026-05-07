@@ -14,14 +14,17 @@ const configuredOrigins = (process.env.CORS_ORIGIN ?? process.env.FRONTEND_URL ?
 
 function isAllowedOrigin(origin: string | undefined): boolean {
   if (!origin) return true;
+  const isProduction = process.env.NODE_ENV === "production";
 
-  try {
-    const url = new URL(origin);
-    if (["localhost", "127.0.0.1", "::1"].includes(url.hostname)) {
-      return true;
+  if (!isProduction) {
+    try {
+      const url = new URL(origin);
+      if (["localhost", "127.0.0.1", "::1"].includes(url.hostname)) {
+        return true;
+      }
+    } catch {
+      return false;
     }
-  } catch {
-    return false;
   }
 
   return configuredOrigins.includes(origin.replace(/\/$/, ""));

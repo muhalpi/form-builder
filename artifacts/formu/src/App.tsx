@@ -8,8 +8,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { LangProvider } from "@/contexts/LangContext";
 import { authClient } from "@/lib/auth-client";
 import NotFound from "@/pages/not-found";
+import Home from "@/pages/Home";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
+import ForgotPassword from "@/pages/ForgotPassword";
+import ResetPassword from "@/pages/ResetPassword";
 import Dashboard from "@/pages/Dashboard";
 import FormBuilder from "@/pages/FormBuilder";
 import FormResponses from "@/pages/FormResponses";
@@ -57,7 +60,7 @@ function GuestRoute({ component: Component }: { component: ComponentType }) {
 
   useEffect(() => {
     if (!session.isPending && session.data) {
-      setLocation("/");
+      setLocation("/dashboard");
     }
   }, [session.data, session.isPending, setLocation]);
 
@@ -70,9 +73,12 @@ function GuestRoute({ component: Component }: { component: ComponentType }) {
 function Router() {
   return (
     <Switch>
+      <Route path="/" component={Home} />
       <Route path="/login">{() => <GuestRoute component={Login} />}</Route>
       <Route path="/signup">{() => <GuestRoute component={Signup} />}</Route>
-      <Route path="/">{() => <ProtectedRoute component={Dashboard} />}</Route>
+      <Route path="/forgot-password">{() => <GuestRoute component={ForgotPassword} />}</Route>
+      <Route path="/reset-password">{() => <GuestRoute component={ResetPassword} />}</Route>
+      <Route path="/dashboard">{() => <ProtectedRoute component={Dashboard} />}</Route>
       <Route path="/forms/:id/build">{() => <ProtectedRoute component={FormBuilder} />}</Route>
       <Route path="/forms/:id/responses">{() => <ProtectedRoute component={FormResponses} />}</Route>
       <Route path="/forms/:id/stats">{() => <ProtectedRoute component={FormStats} />}</Route>

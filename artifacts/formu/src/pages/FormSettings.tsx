@@ -11,6 +11,8 @@ import { FormLayout } from "@/components/layout/FormLayout";
 import { useToast } from "@/hooks/use-toast";
 import { useLang } from "@/contexts/LangContext";
 import { t } from "@/lib/i18n";
+import { authClient } from "@/lib/auth-client";
+import { enableGoogleSheetsIntegration } from "@/lib/feature-flags";
 
 const PRESET_COLORS = [
   "#6366f1", "#8b5cf6", "#ec4899", "#f43f5e",
@@ -42,6 +44,9 @@ export default function FormSettings() {
   const [spreadsheetName, setSpreadsheetName] = useState("");
   const [sheetName, setSheetName] = useState("Form Responses");
   const [sheetEnabled, setSheetEnabled] = useState(true);
+  const [googleConnected, setGoogleConnected] = useState(false);
+  const [checkingGoogleConnection, setCheckingGoogleConnection] = useState(true);
+  const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
 
   useEffect(() => {
     if (form) {
@@ -59,6 +64,67 @@ export default function FormSettings() {
       setSheetEnabled(sheetIntegration.enabled);
     }
   }, [sheetIntegration]);
+
+  useEffect(() => {
+    if (!enableGoogleSheetsIntegration) {
+      setCheckingGoogleConnection(false);
+      return;
+    }
+
+    const loadGoogleConnectionStatus = async () => {
+      try {
+        setCheckingGoogleConnection(true);
+        const apiBase = import.meta.env.VITE_API_URL ?? "http://localhost:8080";
+        const response = await fetch(`${apiBase}/api/forms/${id}/sheets/oauth/status`, {
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          setGoogleConnected(false);
+          return;
+        }
+
+        const data = (await response.json()) as { connected?: boolean };
+        setGoogleConnected(Boolean(data.connected));
+      } catch {
+        setGoogleConnected(false);
+      } finally {
+        setCheckingGoogleConnection(false);
+      }
+    };
+
+    void loadGoogleConnectionStatus();
+  }, [id]);
+
+  const handleConnectGoogle = async () => {
+    if (!enableGoogleSheetsIntegration) return;
+
+    setIsConnectingGoogle(true);
+    const result = await authClient.linkSocial({
+      provider: "google",
+      callbackURL: `/forms/${id}/settings`,
+      scopes: [
+        "openid",
+        "email",
+        "profile",
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive.file",
+      ],
+    });
+    setIsConnectingGoogle(false);
+
+    if (result.error) {
+      toast({
+        title: t(lang, "googleConnectionFailed"),
+        description: result.error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGoogleConnected(true);
+    toast({ title: t(lang, "googleConnectedSuccess") });
+  };
 
   const handleSaveGeneral = () => {
     updateForm.mutate(
@@ -108,8 +174,9 @@ export default function FormSettings() {
           queryClient.invalidateQueries({ queryKey: getGetSheetIntegrationQueryKey(id) });
           toast({ title: result.message });
         },
-        onError: () => {
-          toast({ title: t(lang, "syncFailed"), variant: "destructive" });
+        onError: (error) => {
+          const message = error instanceof Error ? error.message : t(lang, "syncFailed");
+          toast({ title: message, variant: "destructive" });
         },
       }
     );
@@ -261,110 +328,131 @@ export default function FormSettings() {
           </div>
 
           {/* Google Sheets */}
-          <div className="bg-card border border-card-border rounded-xl p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-5 h-5 flex items-center justify-center">
-                <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none">
-                  <rect width="24" height="24" rx="3" fill="#0F9D58" />
-                  <path d="M7 8h10M7 12h10M7 16h6" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </div>
-              <h3 className="text-sm font-semibold text-foreground">{t(lang, "googleSheets")}</h3>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1.5">
-                  {t(lang, "spreadsheetIdLabel")}
-                </label>
-                <input
-                  type="text"
-                  placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"
-                  value={spreadsheetId}
-                  onChange={(e) => setSpreadsheetId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring"
-                  data-testid="input-spreadsheet-id"
-                />
-                <p className="text-xs text-muted-foreground mt-1">{t(lang, "spreadsheetIdHint")}</p>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1.5">
-                  {t(lang, "spreadsheetNameLabel")}
-                </label>
-                <input
-                  type="text"
-                  placeholder="My Form Responses"
-                  value={spreadsheetName}
-                  onChange={(e) => setSpreadsheetName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  data-testid="input-spreadsheet-name"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1.5">
-                  {t(lang, "sheetNameLabel")}
-                </label>
-                <input
-                  type="text"
-                  placeholder="Form Responses"
-                  value={sheetName}
-                  onChange={(e) => setSheetName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  data-testid="input-sheet-name"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="sheet-enabled"
-                  checked={sheetEnabled}
-                  onChange={(e) => setSheetEnabled(e.target.checked)}
-                  className="rounded border-input"
-                  data-testid="checkbox-sheet-enabled"
-                />
-                <label htmlFor="sheet-enabled" className="text-sm text-foreground">{t(lang, "enableAutoSync")}</label>
+          {enableGoogleSheetsIntegration && (
+            <div className="bg-card border border-card-border rounded-xl p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-5 h-5 flex items-center justify-center">
+                  <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none">
+                    <rect width="24" height="24" rx="3" fill="#0F9D58" />
+                    <path d="M7 8h10M7 12h10M7 16h6" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+                <h3 className="text-sm font-semibold text-foreground">{t(lang, "googleSheets")}</h3>
               </div>
 
-              {sheetIntegration?.lastSyncedAt && (
-                <p className="text-xs text-muted-foreground">
-                  {t(lang, "lastSynced")} {new Date(sheetIntegration.lastSyncedAt).toLocaleString()}
-                </p>
-              )}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      {googleConnected ? t(lang, "googleConnected") : t(lang, "googleDisconnected")}
+                    </p>
+                    {!googleConnected && !checkingGoogleConnection && (
+                      <p className="text-xs text-muted-foreground mt-0.5">{t(lang, "googleConnectionNeeded")}</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={handleConnectGoogle}
+                    disabled={isConnectingGoogle || checkingGoogleConnection}
+                    className="px-3.5 py-2 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-60"
+                    data-testid="button-connect-google"
+                  >
+                    {isConnectingGoogle ? t(lang, "saving") : t(lang, "connectGoogleSheets")}
+                  </button>
+                </div>
 
-              <div className="flex items-center gap-2 pt-2">
-                <button
-                  onClick={handleSaveSheet}
-                  disabled={saveSheet.isPending}
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60"
-                  data-testid="button-save-sheet"
-                >
-                  {saveSheet.isPending ? t(lang, "saving") : t(lang, "saveIntegration")}
-                </button>
-                {sheetIntegration && (
-                  <>
-                    <button
-                      onClick={handleSync}
-                      disabled={syncSheets.isPending}
-                      className="flex items-center gap-1.5 px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-muted transition-colors disabled:opacity-60"
-                      data-testid="button-sync-now"
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 ${syncSheets.isPending ? "animate-spin" : ""}`} />
-                      {syncSheets.isPending ? t(lang, "syncing") : t(lang, "syncNow")}
-                    </button>
-                    <button
-                      onClick={handleRemoveSheet}
-                      disabled={deleteSheet.isPending}
-                      className="flex items-center gap-1.5 px-4 py-2 border border-destructive/30 text-destructive rounded-lg text-sm font-medium hover:bg-destructive/10 transition-colors disabled:opacity-60"
-                      data-testid="button-remove-sheet"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      {t(lang, "remove")}
-                    </button>
-                  </>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1.5">
+                    {t(lang, "spreadsheetIdLabel")}
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"
+                    value={spreadsheetId}
+                    onChange={(e) => setSpreadsheetId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring"
+                    data-testid="input-spreadsheet-id"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">{t(lang, "spreadsheetIdHint")}</p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1.5">
+                    {t(lang, "spreadsheetNameLabel")}
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="My Form Responses"
+                    value={spreadsheetName}
+                    onChange={(e) => setSpreadsheetName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    data-testid="input-spreadsheet-name"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1.5">
+                    {t(lang, "sheetNameLabel")}
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Form Responses"
+                    value={sheetName}
+                    onChange={(e) => setSheetName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    data-testid="input-sheet-name"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="sheet-enabled"
+                    checked={sheetEnabled}
+                    onChange={(e) => setSheetEnabled(e.target.checked)}
+                    className="rounded border-input"
+                    data-testid="checkbox-sheet-enabled"
+                  />
+                  <label htmlFor="sheet-enabled" className="text-sm text-foreground">{t(lang, "enableAutoSync")}</label>
+                </div>
+
+                {sheetIntegration?.lastSyncedAt && (
+                  <p className="text-xs text-muted-foreground">
+                    {t(lang, "lastSynced")} {new Date(sheetIntegration.lastSyncedAt).toLocaleString()}
+                  </p>
                 )}
+
+                <div className="flex items-center gap-2 pt-2">
+                  <button
+                    onClick={handleSaveSheet}
+                    disabled={saveSheet.isPending}
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60"
+                    data-testid="button-save-sheet"
+                  >
+                    {saveSheet.isPending ? t(lang, "saving") : t(lang, "saveIntegration")}
+                  </button>
+                  {sheetIntegration && (
+                    <>
+                      <button
+                        onClick={handleSync}
+                        disabled={syncSheets.isPending || !googleConnected}
+                        className="flex items-center gap-1.5 px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-muted transition-colors disabled:opacity-60"
+                        data-testid="button-sync-now"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${syncSheets.isPending ? "animate-spin" : ""}`} />
+                        {syncSheets.isPending ? t(lang, "syncing") : t(lang, "syncNow")}
+                      </button>
+                      <button
+                        onClick={handleRemoveSheet}
+                        disabled={deleteSheet.isPending}
+                        className="flex items-center gap-1.5 px-4 py-2 border border-destructive/30 text-destructive rounded-lg text-sm font-medium hover:bg-destructive/10 transition-colors disabled:opacity-60"
+                        data-testid="button-remove-sheet"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        {t(lang, "remove")}
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </FormLayout>

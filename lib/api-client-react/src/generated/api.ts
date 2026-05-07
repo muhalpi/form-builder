@@ -33,6 +33,7 @@ import type {
   ResponseWithAnswers,
   SaveSheetIntegrationBody,
   SheetIntegration,
+  SheetsOauthStatus,
   SubmitResponseBody,
   SyncToSheets200,
   UpdateFormBody,
@@ -2011,6 +2012,94 @@ export const useDeleteSheetIntegration = <
 > => {
   return useMutation(getDeleteSheetIntegrationMutationOptions(options));
 };
+
+/**
+ * @summary Get Google OAuth connection status for sheet sync
+ */
+export const getGetSheetsOauthStatusUrl = (id: string) => {
+  return `/api/forms/${id}/sheets/oauth/status`;
+};
+
+export const getSheetsOauthStatus = async (
+  id: string,
+  options?: RequestInit,
+): Promise<SheetsOauthStatus> => {
+  return customFetch<SheetsOauthStatus>(getGetSheetsOauthStatusUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSheetsOauthStatusQueryKey = (id: string) => {
+  return [`/api/forms/${id}/sheets/oauth/status`] as const;
+};
+
+export const getGetSheetsOauthStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSheetsOauthStatus>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSheetsOauthStatus>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetSheetsOauthStatusQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getSheetsOauthStatus>>
+  > = ({ signal }) => getSheetsOauthStatus(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSheetsOauthStatus>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetSheetsOauthStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSheetsOauthStatus>>
+>;
+export type GetSheetsOauthStatusQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get Google OAuth connection status for sheet sync
+ */
+
+export function useGetSheetsOauthStatus<
+  TData = Awaited<ReturnType<typeof getSheetsOauthStatus>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSheetsOauthStatus>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetSheetsOauthStatusQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Sync form responses to Google Sheets

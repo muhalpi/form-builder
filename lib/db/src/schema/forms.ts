@@ -5,7 +5,7 @@ import { userTable } from "./auth";
 
 export const formsTable = pgTable("forms", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: text("user_id").references(() => userTable.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => userTable.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   description: text("description"),
   themeColor: text("theme_color").notNull().default("#6366f1"),

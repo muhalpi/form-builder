@@ -503,6 +503,25 @@ paths:
         "204":
           description: Deleted
 
+  /forms/{id}/sheets/oauth/status:
+    get:
+      operationId: getSheetsOauthStatus
+      tags: [sheets]
+      summary: Get Google OAuth connection status for sheet sync
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OAuth status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SheetsOauthStatus"
+
   /forms/{id}/sheets/sync:
     post:
       operationId: syncToSheets
@@ -870,3 +889,10 @@ components:
           type: boolean
           default: true
       required: [spreadsheetId, spreadsheetName, sheetName]
+
+    SheetsOauthStatus:
+      type: object
+      properties:
+        connected:
+          type: boolean
+      required: [connected]

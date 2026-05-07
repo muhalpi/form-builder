@@ -34,7 +34,7 @@ export function FormLayout({ formId, formTitle, children }: FormLayoutProps) {
     <div className="flex flex-col h-screen bg-background">
       {/* Top bar */}
       <header className="flex items-center gap-4 px-5 py-3 border-b border-border bg-card shrink-0">
-        <Link href="/">
+        <Link href="/dashboard">
           <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-back">
             <ArrowLeft className="w-4 h-4" />
             {t(lang, "backLabel")}

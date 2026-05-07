@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@workspace/db";
 import * as schema from "@workspace/db/schema";
+import { sendResetPasswordEmail } from "./email";
 
 function splitOrigins(value: string | undefined): string[] {
   return (value ?? "")
@@ -27,6 +28,30 @@ if (!secret) {
   throw new Error("BETTER_AUTH_SECRET must be set in production.");
 }
 
+const googleClientId = process.env.GOOGLE_CLIENT_ID;
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+const githubClientId = process.env.GITHUB_CLIENT_ID;
+const githubClientSecret = process.env.GITHUB_CLIENT_SECRET;
+
+const socialProviders = {
+  ...(googleClientId && googleClientSecret ? {
+    google: {
+      clientId: googleClientId,
+      clientSecret: googleClientSecret,
+      accessType: "offline" as const,
+      prompt: "select_account consent" as const,
+      updateAccountOnSignIn: true,
+    },
+  } : {}),
+  ...(githubClientId && githubClientSecret ? {
+    github: {
+      clientId: githubClientId,
+      clientSecret: githubClientSecret,
+      updateAccountOnSignIn: true,
+    },
+  } : {}),
+};
+
 export const auth = betterAuth({
   secret,
   baseURL: process.env.BETTER_AUTH_URL,
@@ -37,6 +62,22 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
+    revokeSessionsOnPasswordReset: true,
+    sendResetPassword: async ({ user, url }) => {
+      await sendResetPasswordEmail({
+        email: user.email,
+        resetUrl: url,
+      });
+    },
+  },
+  socialProviders,
+  account: {
+    updateAccountOnSignIn: true,
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ["google", "github", "email-password"],
+      allowDifferentEmails: false,
+    },
   },
   advanced: {
     useSecureCookies: process.env.NODE_ENV === "production",

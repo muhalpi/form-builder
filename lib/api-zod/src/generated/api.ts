@@ -714,6 +714,17 @@ export const DeleteSheetIntegrationParams = zod.object({
 });
 
 /**
+ * @summary Get Google OAuth connection status for sheet sync
+ */
+export const GetSheetsOauthStatusParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const GetSheetsOauthStatusResponse = zod.object({
+  connected: zod.boolean(),
+});
+
+/**
  * @summary Sync form responses to Google Sheets
  */
 export const SyncToSheetsParams = zod.object({

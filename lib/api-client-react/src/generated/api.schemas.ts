@@ -234,6 +234,10 @@ export interface SaveSheetIntegrationBody {
   enabled?: boolean;
 }
 
+export interface SheetsOauthStatus {
+  connected: boolean;
+}
+
 export type PublishFormBody = {
   published: boolean;
 };
