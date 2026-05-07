@@ -1,4 +1,5 @@
-import { pgTable, text, boolean, timestamp, uuid, jsonb } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { pgTable, text, boolean, timestamp, uuid, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { formsTable } from "./forms";
@@ -6,9 +7,14 @@ import { formsTable } from "./forms";
 export const responsesTable = pgTable("responses", {
   id: uuid("id").primaryKey().defaultRandom(),
   formId: uuid("form_id").notNull().references(() => formsTable.id, { onDelete: "cascade" }),
+  respondentHash: text("respondent_hash"),
   completed: boolean("completed").notNull().default(true),
   submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [
+  uniqueIndex("responses_form_respondent_hash_unique")
+    .on(table.formId, table.respondentHash)
+    .where(sql`${table.respondentHash} is not null`),
+]);
 
 export const answersTable = pgTable("answers", {
   id: uuid("id").primaryKey().defaultRandom(),

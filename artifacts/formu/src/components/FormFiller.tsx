@@ -499,7 +499,13 @@ export default function FormFiller({ form, previewMode }: FormFillerProps) {
       { id: form.id, data: { answers: answerPayload, completed: true } },
       {
         onSuccess: () => setSubmitted(true),
-        onError: () => toast({ title: t(lang, "required"), variant: "destructive" }),
+        onError: (error) => {
+          const message = error instanceof Error ? error.message.toLowerCase() : "";
+          const title = message.includes("already submitted")
+            ? t(lang, "responseAlreadySubmitted")
+            : t(lang, "submitFailed");
+          toast({ title, variant: "destructive" });
+        },
       }
     );
   };
