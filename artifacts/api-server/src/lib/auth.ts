@@ -3,6 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@workspace/db";
 import * as schema from "@workspace/db/schema";
 import { sendResetPasswordEmail } from "./email";
+import { dash } from "@better-auth/infra";
 
 function splitOrigins(value: string | undefined): string[] {
   return (value ?? "")
@@ -32,6 +33,7 @@ const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
 const githubClientId = process.env.GITHUB_CLIENT_ID;
 const githubClientSecret = process.env.GITHUB_CLIENT_SECRET;
+const betterAuthApiKey = process.env.BETTER_AUTH_API_KEY?.trim();
 
 const socialProviders = {
   ...(googleClientId && googleClientSecret ? {
@@ -52,10 +54,15 @@ const socialProviders = {
   } : {}),
 };
 
+const authPlugins = betterAuthApiKey
+  ? [dash({ apiKey: betterAuthApiKey })]
+  : [];
+
 export const auth = betterAuth({
   secret,
   baseURL: process.env.BETTER_AUTH_URL,
   trustedOrigins,
+  plugins: authPlugins,
   database: drizzleAdapter(db, {
     provider: "pg",
     schema,
