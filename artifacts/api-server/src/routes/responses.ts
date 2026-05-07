@@ -12,6 +12,7 @@ import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
 const RESPONDENT_COOKIE_PREFIX = "formu_respondent_";
+const RESPONDENT_HEADER_NAME = "x-respondent-token";
 const RESPONDENT_COOKIE_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 365;
 const RESPONDENT_DUPLICATE_ERROR = "Response already submitted for this form";
 const RESPONDENT_UNIQUE_CONSTRAINT = "responses_form_respondent_hash_unique";
@@ -20,12 +21,49 @@ function getRespondentCookieName(formId: string): string {
   return `${RESPONDENT_COOKIE_PREFIX}${formId}`;
 }
 
-function resolveRespondentToken(rawCookie: unknown): { token: string; isNew: boolean } {
-  if (typeof rawCookie === "string" && rawCookie.trim().length > 0) {
-    return { token: rawCookie.trim(), isNew: false };
+function getRespondentCookieOptions() {
+  const isProduction = process.env.NODE_ENV === "production";
+  const sameSite: "none" | "lax" = isProduction ? "none" : "lax";
+  return {
+    httpOnly: true,
+    sameSite,
+    secure: isProduction,
+    path: "/",
+    maxAge: RESPONDENT_COOKIE_MAX_AGE_MS,
+  };
+}
+
+function normalizeRespondentToken(rawToken: unknown): string | null {
+  if (Array.isArray(rawToken)) {
+    return normalizeRespondentToken(rawToken[0]);
+  }
+  if (typeof rawToken !== "string") {
+    return null;
   }
 
-  return { token: randomUUID(), isNew: true };
+  const token = rawToken.split(",")[0]?.trim() ?? "";
+  if (token.length < 8 || token.length > 200) {
+    return null;
+  }
+
+  return token;
+}
+
+function resolveRespondentToken(
+  rawCookie: unknown,
+  rawHeader: unknown,
+): { token: string; shouldSetCookie: boolean } {
+  const cookieToken = normalizeRespondentToken(rawCookie);
+  if (cookieToken) {
+    return { token: cookieToken, shouldSetCookie: false };
+  }
+
+  const headerToken = normalizeRespondentToken(rawHeader);
+  if (headerToken) {
+    return { token: headerToken, shouldSetCookie: true };
+  }
+
+  return { token: randomUUID(), shouldSetCookie: true };
 }
 
 function hashRespondentToken(formId: string, token: string): string {
@@ -147,7 +185,10 @@ router.post("/forms/:id/responses", async (req, res): Promise<void> => {
   }
 
   const respondentCookieName = getRespondentCookieName(params.data.id);
-  const respondentToken = resolveRespondentToken(req.cookies?.[respondentCookieName]);
+  const respondentToken = resolveRespondentToken(
+    req.cookies?.[respondentCookieName],
+    req.headers[RESPONDENT_HEADER_NAME],
+  );
   const respondentHash = hashRespondentToken(params.data.id, respondentToken.token);
 
   const [existingResponse] = await db
@@ -161,14 +202,8 @@ router.post("/forms/:id/responses", async (req, res): Promise<void> => {
     );
 
   if (existingResponse) {
-    if (respondentToken.isNew) {
-      res.cookie(respondentCookieName, respondentToken.token, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
-        maxAge: RESPONDENT_COOKIE_MAX_AGE_MS,
-      });
+    if (respondentToken.shouldSetCookie) {
+      res.cookie(respondentCookieName, respondentToken.token, getRespondentCookieOptions());
     }
 
     res.status(409).json({ error: RESPONDENT_DUPLICATE_ERROR });
@@ -215,14 +250,8 @@ router.post("/forms/:id/responses", async (req, res): Promise<void> => {
     );
   }
 
-  if (respondentToken.isNew) {
-    res.cookie(respondentCookieName, respondentToken.token, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: RESPONDENT_COOKIE_MAX_AGE_MS,
-    });
+  if (respondentToken.shouldSetCookie) {
+    res.cookie(respondentCookieName, respondentToken.token, getRespondentCookieOptions());
   }
 
   res.status(201).json(response);

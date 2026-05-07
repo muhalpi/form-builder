@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Star, Check, GripVertical } from "lucide-react";
 import { useListQuestions, useSubmitResponse, getListQuestionsQueryKey } from "@workspace/api-client-react";
@@ -35,6 +35,35 @@ interface Form {
 interface FormFillerProps {
   form: Form;
   previewMode?: boolean;
+}
+
+const RESPONDENT_TOKEN_STORAGE_PREFIX = "formu_respondent_token_";
+
+function getRespondentTokenStorageKey(formId: string): string {
+  return `${RESPONDENT_TOKEN_STORAGE_PREFIX}${formId}`;
+}
+
+function generateRespondentToken(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function getOrCreateRespondentToken(formId: string): string {
+  if (typeof window === "undefined") {
+    return generateRespondentToken();
+  }
+
+  const storageKey = getRespondentTokenStorageKey(formId);
+  const existing = window.localStorage.getItem(storageKey)?.trim();
+  if (existing) {
+    return existing;
+  }
+
+  const token = generateRespondentToken();
+  window.localStorage.setItem(storageKey, token);
+  return token;
 }
 
 function applyLogic(question: Question, answer: string, questions: Question[]): string | null {
@@ -424,6 +453,7 @@ function WelcomeScreen({ form, onStart }: { form: Form; onStart: () => void }) {
 // ─── Main FormFiller ─────────────────────────────────────────────────────────
 export default function FormFiller({ form, previewMode }: FormFillerProps) {
   const { lang } = useLang();
+  const respondentToken = useMemo(() => getOrCreateRespondentToken(form.id), [form.id]);
 
   const { data: questionsData } = useListQuestions(form.id, {
     query: {
@@ -440,7 +470,13 @@ export default function FormFiller({ form, previewMode }: FormFillerProps) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [direction, setDirection] = useState(1);
   const [submitted, setSubmitted] = useState(false);
-  const submitResponse = useSubmitResponse();
+  const submitResponse = useSubmitResponse({
+    request: {
+      headers: {
+        "x-respondent-token": respondentToken,
+      },
+    },
+  });
   const { toast } = useToast();
 
   const currentQuestion = sortedQuestions[currentIndex];
