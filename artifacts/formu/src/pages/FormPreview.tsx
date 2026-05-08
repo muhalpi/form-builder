@@ -33,7 +33,7 @@ export default function FormPreview() {
           Preview Mode
         </span>
       </div>
-      {form && <FormFiller form={form as any} previewMode />}
+      {form && <FormFiller form={form} previewMode />}
     </div>
   );
 }

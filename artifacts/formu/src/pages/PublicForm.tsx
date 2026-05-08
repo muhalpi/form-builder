@@ -30,5 +30,5 @@ export default function PublicForm() {
     );
   }
 
-  return <FormFiller form={form as any} />;
+  return <FormFiller form={form} />;
 }

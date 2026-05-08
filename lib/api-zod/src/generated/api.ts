@@ -23,12 +23,6 @@ export const ListFormsResponseItem = zod.object({
   description: zod.string().nullish(),
   themeColor: zod.string(),
   isPublished: zod.boolean(),
-  randomizeQuestions: zod.boolean(),
-  showScore: zod.boolean(),
-  endScreenTitle: zod.string().nullish(),
-  endScreenDescription: zod.string().nullish(),
-  endScreenButtonText: zod.string().nullish(),
-  endScreenButtonUrl: zod.string().nullish(),
   questionCount: zod.number(),
   responseCount: zod.number(),
   createdAt: zod.coerce.date(),
@@ -61,12 +55,6 @@ export const GetFormResponse = zod
     description: zod.string().nullish(),
     themeColor: zod.string(),
     isPublished: zod.boolean(),
-    randomizeQuestions: zod.boolean(),
-    showScore: zod.boolean(),
-    endScreenTitle: zod.string().nullish(),
-    endScreenDescription: zod.string().nullish(),
-    endScreenButtonText: zod.string().nullish(),
-    endScreenButtonUrl: zod.string().nullish(),
     questionCount: zod.number(),
     responseCount: zod.number(),
     createdAt: zod.coerce.date(),
@@ -116,32 +104,9 @@ export const GetFormResponse = zod
               }),
             )
             .nullish(),
-          groupId: zod.string().nullish(),
-          points: zod
-            .object({
-              enabled: zod.boolean().optional(),
-              defaultPoints: zod.number().nullish(),
-              optionValues: zod.record(zod.string(), zod.number()).nullish(),
-            })
-            .nullish()
-            .describe(
-              "Points config - for choice types optionValues is a map of option to points; for other types use defaultPoints",
-            ),
           createdAt: zod.coerce.date(),
         }),
       ),
-      groups: zod
-        .array(
-          zod.object({
-            id: zod.string(),
-            formId: zod.string(),
-            name: zod.string(),
-            order: zod.number(),
-            randomize: zod.boolean(),
-            createdAt: zod.coerce.date(),
-          }),
-        )
-        .optional(),
     }),
   );
 
@@ -157,12 +122,6 @@ export const UpdateFormBody = zod.object({
   description: zod.string().optional(),
   themeColor: zod.string().optional(),
   isPublished: zod.boolean().optional(),
-  randomizeQuestions: zod.boolean().optional(),
-  showScore: zod.boolean().optional(),
-  endScreenTitle: zod.string().nullish(),
-  endScreenDescription: zod.string().nullish(),
-  endScreenButtonText: zod.string().nullish(),
-  endScreenButtonUrl: zod.string().nullish(),
 });
 
 export const UpdateFormResponse = zod.object({
@@ -171,12 +130,6 @@ export const UpdateFormResponse = zod.object({
   description: zod.string().nullish(),
   themeColor: zod.string(),
   isPublished: zod.boolean(),
-  randomizeQuestions: zod.boolean(),
-  showScore: zod.boolean(),
-  endScreenTitle: zod.string().nullish(),
-  endScreenDescription: zod.string().nullish(),
-  endScreenButtonText: zod.string().nullish(),
-  endScreenButtonUrl: zod.string().nullish(),
   questionCount: zod.number(),
   responseCount: zod.number(),
   createdAt: zod.coerce.date(),
@@ -207,12 +160,6 @@ export const PublishFormResponse = zod.object({
   description: zod.string().nullish(),
   themeColor: zod.string(),
   isPublished: zod.boolean(),
-  randomizeQuestions: zod.boolean(),
-  showScore: zod.boolean(),
-  endScreenTitle: zod.string().nullish(),
-  endScreenDescription: zod.string().nullish(),
-  endScreenButtonText: zod.string().nullish(),
-  endScreenButtonUrl: zod.string().nullish(),
   questionCount: zod.number(),
   responseCount: zod.number(),
   createdAt: zod.coerce.date(),
@@ -240,12 +187,6 @@ export const GetPublicFormResponse = zod
     description: zod.string().nullish(),
     themeColor: zod.string(),
     isPublished: zod.boolean(),
-    randomizeQuestions: zod.boolean(),
-    showScore: zod.boolean(),
-    endScreenTitle: zod.string().nullish(),
-    endScreenDescription: zod.string().nullish(),
-    endScreenButtonText: zod.string().nullish(),
-    endScreenButtonUrl: zod.string().nullish(),
     questionCount: zod.number(),
     responseCount: zod.number(),
     createdAt: zod.coerce.date(),
@@ -295,32 +236,9 @@ export const GetPublicFormResponse = zod
               }),
             )
             .nullish(),
-          groupId: zod.string().nullish(),
-          points: zod
-            .object({
-              enabled: zod.boolean().optional(),
-              defaultPoints: zod.number().nullish(),
-              optionValues: zod.record(zod.string(), zod.number()).nullish(),
-            })
-            .nullish()
-            .describe(
-              "Points config - for choice types optionValues is a map of option to points; for other types use defaultPoints",
-            ),
           createdAt: zod.coerce.date(),
         }),
       ),
-      groups: zod
-        .array(
-          zod.object({
-            id: zod.string(),
-            formId: zod.string(),
-            name: zod.string(),
-            order: zod.number(),
-            randomize: zod.boolean(),
-            createdAt: zod.coerce.date(),
-          }),
-        )
-        .optional(),
     }),
   );
 
@@ -372,17 +290,6 @@ export const ListQuestionsResponseItem = zod.object({
       }),
     )
     .nullish(),
-  groupId: zod.string().nullish(),
-  points: zod
-    .object({
-      enabled: zod.boolean().optional(),
-      defaultPoints: zod.number().nullish(),
-      optionValues: zod.record(zod.string(), zod.number()).nullish(),
-    })
-    .nullish()
-    .describe(
-      "Points config - for choice types optionValues is a map of option to points; for other types use defaultPoints",
-    ),
   createdAt: zod.coerce.date(),
 });
 export const ListQuestionsResponse = zod.array(ListQuestionsResponseItem);
@@ -434,17 +341,6 @@ export const CreateQuestionBody = zod.object({
       }),
     )
     .optional(),
-  groupId: zod.string().nullish(),
-  points: zod
-    .object({
-      enabled: zod.boolean().optional(),
-      defaultPoints: zod.number().nullish(),
-      optionValues: zod.record(zod.string(), zod.number()).nullish(),
-    })
-    .nullish()
-    .describe(
-      "Points config - for choice types optionValues is a map of option to points; for other types use defaultPoints",
-    ),
 });
 
 /**
@@ -499,17 +395,6 @@ export const ReorderQuestionsResponseItem = zod.object({
       }),
     )
     .nullish(),
-  groupId: zod.string().nullish(),
-  points: zod
-    .object({
-      enabled: zod.boolean().optional(),
-      defaultPoints: zod.number().nullish(),
-      optionValues: zod.record(zod.string(), zod.number()).nullish(),
-    })
-    .nullish()
-    .describe(
-      "Points config - for choice types optionValues is a map of option to points; for other types use defaultPoints",
-    ),
   createdAt: zod.coerce.date(),
 });
 export const ReorderQuestionsResponse = zod.array(ReorderQuestionsResponseItem);
@@ -562,17 +447,6 @@ export const UpdateQuestionBody = zod.object({
       }),
     )
     .optional(),
-  groupId: zod.string().nullish(),
-  points: zod
-    .object({
-      enabled: zod.boolean().optional(),
-      defaultPoints: zod.number().nullish(),
-      optionValues: zod.record(zod.string(), zod.number()).nullish(),
-    })
-    .nullish()
-    .describe(
-      "Points config - for choice types optionValues is a map of option to points; for other types use defaultPoints",
-    ),
 });
 
 export const UpdateQuestionResponse = zod.object({
@@ -616,17 +490,6 @@ export const UpdateQuestionResponse = zod.object({
       }),
     )
     .nullish(),
-  groupId: zod.string().nullish(),
-  points: zod
-    .object({
-      enabled: zod.boolean().optional(),
-      defaultPoints: zod.number().nullish(),
-      optionValues: zod.record(zod.string(), zod.number()).nullish(),
-    })
-    .nullish()
-    .describe(
-      "Points config - for choice types optionValues is a map of option to points; for other types use defaultPoints",
-    ),
   createdAt: zod.coerce.date(),
 });
 
@@ -636,69 +499,6 @@ export const UpdateQuestionResponse = zod.object({
 export const DeleteQuestionParams = zod.object({
   formId: zod.coerce.string(),
   questionId: zod.coerce.string(),
-});
-
-/**
- * @summary List question groups for a form
- */
-export const ListGroupsParams = zod.object({
-  id: zod.coerce.string(),
-});
-
-export const ListGroupsResponseItem = zod.object({
-  id: zod.string(),
-  formId: zod.string(),
-  name: zod.string(),
-  order: zod.number(),
-  randomize: zod.boolean(),
-  createdAt: zod.coerce.date(),
-});
-export const ListGroupsResponse = zod.array(ListGroupsResponseItem);
-
-/**
- * @summary Create a question group
- */
-export const CreateGroupParams = zod.object({
-  id: zod.coerce.string(),
-});
-
-export const createGroupBodyRandomizeDefault = false;
-
-export const CreateGroupBody = zod.object({
-  name: zod.string(),
-  order: zod.number().optional(),
-  randomize: zod.boolean().default(createGroupBodyRandomizeDefault),
-});
-
-/**
- * @summary Update a question group
- */
-export const UpdateGroupParams = zod.object({
-  formId: zod.coerce.string(),
-  groupId: zod.coerce.string(),
-});
-
-export const UpdateGroupBody = zod.object({
-  name: zod.string().optional(),
-  order: zod.number().optional(),
-  randomize: zod.boolean().optional(),
-});
-
-export const UpdateGroupResponse = zod.object({
-  id: zod.string(),
-  formId: zod.string(),
-  name: zod.string(),
-  order: zod.number(),
-  randomize: zod.boolean(),
-  createdAt: zod.coerce.date(),
-});
-
-/**
- * @summary Delete a question group
- */
-export const DeleteGroupParams = zod.object({
-  formId: zod.coerce.string(),
-  groupId: zod.coerce.string(),
 });
 
 /**
@@ -853,12 +653,6 @@ export const GetDashboardSummaryResponse = zod.object({
       description: zod.string().nullish(),
       themeColor: zod.string(),
       isPublished: zod.boolean(),
-      randomizeQuestions: zod.boolean(),
-      showScore: zod.boolean(),
-      endScreenTitle: zod.string().nullish(),
-      endScreenDescription: zod.string().nullish(),
-      endScreenButtonText: zod.string().nullish(),
-      endScreenButtonUrl: zod.string().nullish(),
       questionCount: zod.number(),
       responseCount: zod.number(),
       createdAt: zod.coerce.date(),

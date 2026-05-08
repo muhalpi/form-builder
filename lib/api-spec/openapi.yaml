@@ -14,8 +14,6 @@ tags:
     description: Form management
   - name: questions
     description: Question management
-  - name: groups
-    description: Question group management
   - name: responses
     description: Form responses
   - name: dashboard
@@ -320,98 +318,6 @@ paths:
         "204":
           description: Deleted
 
-  /forms/{id}/groups:
-    get:
-      operationId: listGroups
-      tags: [groups]
-      summary: List question groups for a form
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: List of groups
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/QuestionGroup"
-    post:
-      operationId: createGroup
-      tags: [groups]
-      summary: Create a question group
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateGroupBody"
-      responses:
-        "201":
-          description: Created group
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/QuestionGroup"
-
-  /forms/{formId}/groups/{groupId}:
-    put:
-      operationId: updateGroup
-      tags: [groups]
-      summary: Update a question group
-      parameters:
-        - name: formId
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: groupId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateGroupBody"
-      responses:
-        "200":
-          description: Updated group
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/QuestionGroup"
-    delete:
-      operationId: deleteGroup
-      tags: [groups]
-      summary: Delete a question group
-      parameters:
-        - name: formId
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: groupId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "204":
-          description: Deleted
-
   /forms/{id}/responses:
     get:
       operationId: listResponses
@@ -650,22 +556,6 @@ components:
           type: string
       required: [status]
 
-    EndScreen:
-      type: object
-      properties:
-        title:
-          type: string
-          nullable: true
-        description:
-          type: string
-          nullable: true
-        buttonText:
-          type: string
-          nullable: true
-        buttonUrl:
-          type: string
-          nullable: true
-
     Form:
       type: object
       properties:
@@ -680,22 +570,6 @@ components:
           type: string
         isPublished:
           type: boolean
-        randomizeQuestions:
-          type: boolean
-        showScore:
-          type: boolean
-        endScreenTitle:
-          type: string
-          nullable: true
-        endScreenDescription:
-          type: string
-          nullable: true
-        endScreenButtonText:
-          type: string
-          nullable: true
-        endScreenButtonUrl:
-          type: string
-          nullable: true
         questionCount:
           type: integer
         responseCount:
@@ -706,7 +580,7 @@ components:
         updatedAt:
           type: string
           format: date-time
-      required: [id, title, themeColor, isPublished, randomizeQuestions, showScore, questionCount, responseCount, createdAt, updatedAt]
+      required: [id, title, themeColor, isPublished, questionCount, responseCount, createdAt, updatedAt]
 
     FormWithQuestions:
       allOf:
@@ -717,10 +591,6 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/Question"
-            groups:
-              type: array
-              items:
-                $ref: "#/components/schemas/QuestionGroup"
           required: [questions]
 
     CreateFormBody:
@@ -746,37 +616,6 @@ components:
           type: string
         isPublished:
           type: boolean
-        randomizeQuestions:
-          type: boolean
-        showScore:
-          type: boolean
-        endScreenTitle:
-          type: string
-          nullable: true
-        endScreenDescription:
-          type: string
-          nullable: true
-        endScreenButtonText:
-          type: string
-          nullable: true
-        endScreenButtonUrl:
-          type: string
-          nullable: true
-
-    QuestionPoints:
-      type: object
-      description: Points config - for choice types optionValues is a map of option to points; for other types use defaultPoints
-      properties:
-        enabled:
-          type: boolean
-        defaultPoints:
-          type: integer
-          nullable: true
-        optionValues:
-          type: object
-          additionalProperties:
-            type: integer
-          nullable: true
 
     Question:
       type: object
@@ -806,12 +645,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/LogicRule"
-          nullable: true
-        groupId:
-          type: string
-          nullable: true
-        points:
-          $ref: "#/components/schemas/QuestionPoints"
           nullable: true
         createdAt:
           type: string
@@ -855,12 +688,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/LogicRule"
-        groupId:
-          type: string
-          nullable: true
-        points:
-          $ref: "#/components/schemas/QuestionPoints"
-          nullable: true
       required: [type, title]
 
     UpdateQuestionBody:
@@ -883,52 +710,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/LogicRule"
-        groupId:
-          type: string
-          nullable: true
-        points:
-          $ref: "#/components/schemas/QuestionPoints"
-          nullable: true
-
-    QuestionGroup:
-      type: object
-      properties:
-        id:
-          type: string
-        formId:
-          type: string
-        name:
-          type: string
-        order:
-          type: integer
-        randomize:
-          type: boolean
-        createdAt:
-          type: string
-          format: date-time
-      required: [id, formId, name, order, randomize, createdAt]
-
-    CreateGroupBody:
-      type: object
-      properties:
-        name:
-          type: string
-        order:
-          type: integer
-        randomize:
-          type: boolean
-          default: false
-      required: [name]
-
-    UpdateGroupBody:
-      type: object
-      properties:
-        name:
-          type: string
-        order:
-          type: integer
-        randomize:
-          type: boolean
 
     Response:
       type: object

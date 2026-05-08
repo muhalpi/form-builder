@@ -303,45 +303,6 @@ export const translations = {
     googleConnectionNeeded: "Connect Google first to sync responses.",
     googleConnectionFailed: "Google connection failed",
     googleConnectedSuccess: "Google account connected successfully",
-
-    // Randomize
-    randomizeSection: "Randomize",
-    randomizeLabel: "Randomize question order",
-    randomizeHint: "Questions will be shown in a random order for each respondent",
-
-    // Point Score
-    pointsSection: "Point Score",
-    pointsLabel: "Enable point scoring",
-    pointsHint: "Show respondents their total score at the end",
-    pointsForQuestion: "Points",
-    pointsForOption: "Points per option",
-    defaultPoints: "Default points",
-    showScoreLabel: "Show score on end screen",
-    yourScore: "Your Score",
-    outOf: "out of",
-    pointsLabel2: "points",
-
-    // Question Groups
-    groupsSection: "Question Groups",
-    addGroup: "Add Group",
-    groupName: "Group Name",
-    groupRandomize: "Randomize questions in group",
-    assignGroup: "Group",
-    noGroup: "No Group",
-    deleteGroup: "Delete Group",
-    editGroup: "Edit Group",
-    groupNamePlaceholder: "e.g. Personal Info",
-
-    // End Screen
-    endScreenSection: "End Screen",
-    endScreenTitle: "End Screen Title",
-    endScreenDescription: "End Screen Message",
-    endScreenButtonText: "Button Text",
-    endScreenButtonUrl: "Button URL",
-    endScreenTitlePlaceholder: "Thank you!",
-    endScreenDescPlaceholder: "Your response has been submitted successfully.",
-    endScreenBtnTextPlaceholder: "Go to website",
-    endScreenBtnUrlPlaceholder: "https://example.com",
   },
 
   id: {
@@ -646,45 +607,6 @@ export const translations = {
     googleConnectionNeeded: "Hubungkan Google terlebih dahulu untuk sinkronisasi jawaban.",
     googleConnectionFailed: "Gagal menghubungkan akun Google",
     googleConnectedSuccess: "Akun Google berhasil terhubung",
-
-    // Randomize
-    randomizeSection: "Acak",
-    randomizeLabel: "Acak urutan pertanyaan",
-    randomizeHint: "Pertanyaan akan ditampilkan secara acak untuk setiap responden",
-
-    // Point Score
-    pointsSection: "Skor Poin",
-    pointsLabel: "Aktifkan penilaian poin",
-    pointsHint: "Tampilkan total skor kepada responden di akhir",
-    pointsForQuestion: "Poin",
-    pointsForOption: "Poin per pilihan",
-    defaultPoints: "Poin default",
-    showScoreLabel: "Tampilkan skor di akhir",
-    yourScore: "Skor Anda",
-    outOf: "dari",
-    pointsLabel2: "poin",
-
-    // Question Groups
-    groupsSection: "Grup Pertanyaan",
-    addGroup: "Tambah Grup",
-    groupName: "Nama Grup",
-    groupRandomize: "Acak pertanyaan dalam grup",
-    assignGroup: "Grup",
-    noGroup: "Tanpa Grup",
-    deleteGroup: "Hapus Grup",
-    editGroup: "Edit Grup",
-    groupNamePlaceholder: "misal: Info Pribadi",
-
-    // End Screen
-    endScreenSection: "Layar Akhir",
-    endScreenTitle: "Judul Layar Akhir",
-    endScreenDescription: "Pesan Layar Akhir",
-    endScreenButtonText: "Teks Tombol",
-    endScreenButtonUrl: "URL Tombol",
-    endScreenTitlePlaceholder: "Terima kasih!",
-    endScreenDescPlaceholder: "Jawaban Anda telah berhasil dikirim.",
-    endScreenBtnTextPlaceholder: "Kunjungi website",
-    endScreenBtnUrlPlaceholder: "https://contoh.com",
   },
 } as const;
 

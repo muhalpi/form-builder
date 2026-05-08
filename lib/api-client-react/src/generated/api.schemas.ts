@@ -9,25 +9,12 @@ export interface HealthStatus {
   status: string;
 }
 
-export interface EndScreen {
-  title?: string | null;
-  description?: string | null;
-  buttonText?: string | null;
-  buttonUrl?: string | null;
-}
-
 export interface Form {
   id: string;
   title: string;
   description?: string | null;
   themeColor: string;
   isPublished: boolean;
-  randomizeQuestions: boolean;
-  showScore: boolean;
-  endScreenTitle?: string | null;
-  endScreenDescription?: string | null;
-  endScreenButtonText?: string | null;
-  endScreenButtonUrl?: string | null;
   questionCount: number;
   responseCount: number;
   createdAt: string;
@@ -72,17 +59,6 @@ export interface LogicRule {
   jumpToEnd?: boolean;
 }
 
-export type QuestionPointsOptionValues = { [key: string]: number } | null;
-
-/**
- * Points config - for choice types optionValues is a map of option to points; for other types use defaultPoints
- */
-export interface QuestionPoints {
-  enabled?: boolean;
-  defaultPoints?: number | null;
-  optionValues?: QuestionPointsOptionValues;
-}
-
 export interface Question {
   id: string;
   formId: string;
@@ -93,23 +69,11 @@ export interface Question {
   order: number;
   options?: string[] | null;
   logic?: LogicRule[] | null;
-  groupId?: string | null;
-  points?: QuestionPoints | null;
-  createdAt: string;
-}
-
-export interface QuestionGroup {
-  id: string;
-  formId: string;
-  name: string;
-  order: number;
-  randomize: boolean;
   createdAt: string;
 }
 
 export type FormWithQuestions = Form & {
   questions: Question[];
-  groups?: QuestionGroup[];
 };
 
 export interface CreateFormBody {
@@ -123,12 +87,6 @@ export interface UpdateFormBody {
   description?: string;
   themeColor?: string;
   isPublished?: boolean;
-  randomizeQuestions?: boolean;
-  showScore?: boolean;
-  endScreenTitle?: string | null;
-  endScreenDescription?: string | null;
-  endScreenButtonText?: string | null;
-  endScreenButtonUrl?: string | null;
 }
 
 export type CreateQuestionBodyType =
@@ -157,8 +115,6 @@ export interface CreateQuestionBody {
   required?: boolean;
   options?: string[];
   logic?: LogicRule[];
-  groupId?: string | null;
-  points?: QuestionPoints | null;
 }
 
 export type UpdateQuestionBodyType =
@@ -187,20 +143,6 @@ export interface UpdateQuestionBody {
   required?: boolean;
   options?: string[];
   logic?: LogicRule[];
-  groupId?: string | null;
-  points?: QuestionPoints | null;
-}
-
-export interface CreateGroupBody {
-  name: string;
-  order?: number;
-  randomize?: boolean;
-}
-
-export interface UpdateGroupBody {
-  name?: string;
-  order?: number;
-  randomize?: boolean;
 }
 
 export interface Response {

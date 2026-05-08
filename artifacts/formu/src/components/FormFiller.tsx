@@ -22,9 +22,6 @@ interface Question {
   order: number;
   options?: string[] | null;
   logic?: LogicRule[] | null;
-  groupId?: string | null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  points?: any;
 }
 
 interface Form {
@@ -33,12 +30,6 @@ interface Form {
   description?: string | null;
   themeColor: string;
   questions?: Question[];
-  randomizeQuestions?: boolean;
-  showScore?: boolean;
-  endScreenTitle?: string | null;
-  endScreenDescription?: string | null;
-  endScreenButtonText?: string | null;
-  endScreenButtonUrl?: string | null;
 }
 
 interface FormFillerProps {
@@ -491,45 +482,6 @@ function WelcomeScreen({ form, onStart, isStarting }: { form: Form; onStart: () 
   );
 }
 
-function shuffleArray<T>(arr: T[]): T[] {
-  const result = [...arr];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-  return result;
-}
-
-function calculateScore(questions: Question[], answers: Record<string, string>): { earned: number; total: number } {
-  let earned = 0;
-  let total = 0;
-
-  for (const q of questions) {
-    if (!q.points) continue;
-    const defaultPts = q.points["__default__"] ?? 0;
-    const answer = answers[q.id];
-
-    if (q.type === "multiple_choice" || q.type === "yes_no" || q.type === "dropdown") {
-      const pts = answer ? (q.points[answer] ?? defaultPts) : 0;
-      const vals = Object.entries(q.points as Record<string, number>).filter(([k]) => k !== "__default__").map(([, v]) => v);
-      total += vals.length > 0 ? Math.max(...vals) : 0;
-      earned += pts;
-    } else if (q.type === "checkbox") {
-      const selected = answer ? answer.split(",").filter(Boolean) : [];
-      for (const opt of Object.keys(q.points)) {
-        if (opt === "__default__") continue;
-        total += q.points[opt];
-        if (selected.includes(opt)) earned += q.points[opt];
-      }
-    } else if (defaultPts > 0) {
-      total += defaultPts;
-      if (answer && answer.trim()) earned += defaultPts;
-    }
-  }
-
-  return { earned, total };
-}
-
 // ─── Main FormFiller ─────────────────────────────────────────────────────────
 export default function FormFiller({ form, previewMode }: FormFillerProps) {
   const { lang } = useLang();
@@ -543,16 +495,7 @@ export default function FormFiller({ form, previewMode }: FormFillerProps) {
   });
 
   const questions = (form.questions || questionsData || []) as Question[];
-  const baseSortedQuestions = [...questions].sort((a, b) => a.order - b.order);
-
-  // Randomize once on component mount (only if enabled)
-  const sortedQuestions = useMemo(() => {
-    if (form.randomizeQuestions && baseSortedQuestions.length > 0) {
-      return shuffleArray(baseSortedQuestions);
-    }
-    return baseSortedQuestions;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.randomizeQuestions, baseSortedQuestions.length]);
+  const sortedQuestions = [...questions].sort((a, b) => a.order - b.order);
 
   const [started, setStarted] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -665,20 +608,12 @@ export default function FormFiller({ form, previewMode }: FormFillerProps) {
   }
 
   if (submitted) {
-    const hasScore = form.showScore && sortedQuestions.some(q => q.points);
-    const score = hasScore ? calculateScore(sortedQuestions, answers) : null;
-    const endTitle = form.endScreenTitle || t(lang, "thankYou");
-    const endDesc = form.endScreenDescription || t(lang, "responseSubmitted");
-    const endBtnText = form.endScreenButtonText;
-    const endBtnUrl = form.endScreenButtonUrl;
-
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.4 }}
-          className="max-w-lg w-full"
         >
           <div
             className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
@@ -686,36 +621,8 @@ export default function FormFiller({ form, previewMode }: FormFillerProps) {
           >
             <Check className="w-8 h-8" style={{ color: form.themeColor }} />
           </div>
-          <h1 className="text-3xl font-bold text-foreground mb-3">{endTitle}</h1>
-          <p className="text-muted-foreground mb-6">{endDesc}</p>
-
-          {score !== null && (
-            <div
-              className="inline-flex flex-col items-center px-8 py-5 rounded-2xl mb-6"
-              style={{ backgroundColor: form.themeColor + "18" }}
-            >
-              <span className="text-5xl font-bold mb-1" style={{ color: form.themeColor }}>
-                {score.earned}
-              </span>
-              <span className="text-sm text-muted-foreground">
-                {t(lang, "outOf")} {score.total} {t(lang, "pointsLabel2")}
-              </span>
-            </div>
-          )}
-
-          {endBtnText && endBtnUrl && (
-            <div className="mt-2">
-              <a
-                href={endBtnUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block px-8 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
-                style={{ backgroundColor: form.themeColor }}
-              >
-                {endBtnText}
-              </a>
-            </div>
-          )}
+          <h1 className="text-3xl font-bold text-foreground mb-3">{t(lang, "thankYou")}</h1>
+          <p className="text-muted-foreground">{t(lang, "responseSubmitted")}</p>
         </motion.div>
         <div className="mt-12 text-xs text-muted-foreground">{t(lang, "poweredBy")}</div>
       </div>
