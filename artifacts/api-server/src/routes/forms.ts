@@ -26,6 +26,8 @@ function mapQuestion(q: typeof questionsTable.$inferSelect) {
     ...q,
     options: q.options ?? null,
     logic: (q.logic as any[]) ?? null,
+    groupId: q.groupId ?? null,
+    points: (q.points as any) ?? null,
   };
 }
 
@@ -173,6 +175,12 @@ router.put("/forms/:id", requireAuth, async (req, res): Promise<void> => {
   if (parsed.data.description !== undefined) updateData.description = parsed.data.description;
   if (parsed.data.themeColor !== undefined) updateData.themeColor = parsed.data.themeColor;
   if (parsed.data.isPublished !== undefined) updateData.isPublished = parsed.data.isPublished;
+  if (parsed.data.randomizeQuestions !== undefined) updateData.randomizeQuestions = parsed.data.randomizeQuestions;
+  if (parsed.data.showScore !== undefined) updateData.showScore = parsed.data.showScore;
+  if ("endScreenTitle" in parsed.data) updateData.endScreenTitle = parsed.data.endScreenTitle ?? null;
+  if ("endScreenDescription" in parsed.data) updateData.endScreenDescription = parsed.data.endScreenDescription ?? null;
+  if ("endScreenButtonText" in parsed.data) updateData.endScreenButtonText = parsed.data.endScreenButtonText ?? null;
+  if ("endScreenButtonUrl" in parsed.data) updateData.endScreenButtonUrl = parsed.data.endScreenButtonUrl ?? null;
 
   const [updated] = await db
     .update(formsTable)
@@ -354,6 +362,8 @@ router.post("/forms/:id/questions", requireAuth, async (req, res): Promise<void>
     order: nextOrder,
     options: parsed.data.options ?? null,
     logic: parsed.data.logic ?? null,
+    groupId: parsed.data.groupId ?? null,
+    points: parsed.data.points ?? null,
   }).returning();
 
   res.status(201).json(mapQuestion(question));
@@ -445,6 +455,8 @@ router.put("/forms/:formId/questions/:questionId", requireAuth, async (req, res)
   if (parsed.data.required !== undefined) updateData.required = parsed.data.required;
   if (parsed.data.options !== undefined) updateData.options = parsed.data.options;
   if (parsed.data.logic !== undefined) updateData.logic = parsed.data.logic;
+  if ("groupId" in parsed.data) updateData.groupId = parsed.data.groupId ?? null;
+  if ("points" in parsed.data) updateData.points = parsed.data.points ?? null;
 
   const [updated] = await db
     .update(questionsTable)

@@ -13,6 +13,8 @@ export const questionsTable = pgTable("questions", {
   order: integer("order").notNull().default(0),
   options: text("options").array(),
   logic: jsonb("logic"),
+  groupId: uuid("group_id"),
+  points: jsonb("points"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
