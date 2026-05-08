@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Typeform Builder"
+version = "1.0.0"
+id = "artifacts/typeform-builder"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23941
+
+[services.development]
+run = "pnpm --filter @workspace/typeform-builder run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/typeform-builder", "run", "build" ]
+publicDir = "artifacts/typeform-builder/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23941"
+BASE_PATH = "/"

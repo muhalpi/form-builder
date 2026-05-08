@@ -3,12 +3,14 @@ import { useState } from "react";
 import {
   Type, AlignLeft, List, CheckSquare, ChevronDown as DropdownIcon,
   Star, Calendar, Mail, Phone, Hash, ToggleLeft, BarChart2, ArrowUpDown,
-  Plus, GripVertical, Trash2, ChevronDown, ChevronRight, X, Ellipsis, Copy
+  Plus, GripVertical, Trash2, ChevronDown, ChevronRight, X, Ellipsis, Copy,
+  Layers, Trophy
 } from "lucide-react";
 import {
   useGetForm, useListQuestions, useCreateQuestion, useUpdateQuestion,
   useDeleteQuestion, useReorderQuestions,
-  getGetFormQueryKey, getListQuestionsQueryKey
+  useListGroups, useCreateGroup, useUpdateGroup, useDeleteGroup,
+  getGetFormQueryKey, getListQuestionsQueryKey, getListGroupsQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { FormLayout } from "@/components/layout/FormLayout";
@@ -143,7 +145,17 @@ interface Question {
   order: number;
   options?: string[] | null;
   logic?: LogicRule[] | null;
+  groupId?: string | null;
+  points?: Record<string, number> | null;
   createdAt: string;
+}
+
+interface Group {
+  id: string;
+  formId: string;
+  name: string;
+  order: number;
+  randomize: boolean;
 }
 
 interface LogicRule {
@@ -156,12 +168,14 @@ interface LogicRule {
 function QuestionEditor({
   question,
   questions,
+  groups,
   onUpdate,
   onDelete,
   lang,
 }: {
   question: Question;
   questions: Question[];
+  groups: Group[];
   onUpdate: (data: Partial<Question>) => void;
   onDelete: () => void;
   lang: Lang;
@@ -169,12 +183,16 @@ function QuestionEditor({
   const [localTitle, setLocalTitle] = useState(question.title);
   const [localDesc, setLocalDesc] = useState(question.description ?? "");
   const [showLogic, setShowLogic] = useState(false);
+  const [showPoints, setShowPoints] = useState(false);
   const [options, setOptions] = useState<string[]>(question.options ?? []);
   const [logic, setLogic] = useState<LogicRule[]>((question.logic as LogicRule[]) ?? []);
+  const [points, setPoints] = useState<Record<string, number>>(question.points ?? {});
   const [newOption, setNewOption] = useState("");
 
   const hasOptions = ["multiple_choice", "checkbox", "dropdown", "ranking"].includes(question.type);
   const isOpinionScale = question.type === "opinion_scale";
+  const supportsOptionPoints = ["multiple_choice", "checkbox", "dropdown", "yes_no"].includes(question.type);
+  const supportsDefaultPoints = !supportsOptionPoints;
 
   const handleBlurTitle = () => { if (localTitle !== question.title) onUpdate({ title: localTitle }); };
   const handleBlurDesc = () => { if (localDesc !== (question.description ?? "")) onUpdate({ description: localDesc }); };
@@ -189,6 +207,17 @@ function QuestionEditor({
   const removeOption = (idx: number) => {
     const next = options.filter((_, i) => i !== idx);
     setOptions(next); onUpdate({ options: next });
+  };
+
+  const updatePoints = (key: string, val: number) => {
+    const next = { ...points, [key]: val };
+    setPoints(next);
+    onUpdate({ points: next });
+  };
+
+  const clearPoints = () => {
+    setPoints({});
+    onUpdate({ points: null });
   };
 
   const addLogicRule = () => {
@@ -391,6 +420,77 @@ function QuestionEditor({
         </div>
       )}
 
+      {/* Group assignment */}
+      {groups.length > 0 && (
+        <div className="flex items-center gap-3">
+          <Layers className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          <label className="text-xs font-medium text-muted-foreground">{t(lang, "assignGroup")}</label>
+          <select
+            value={question.groupId ?? ""}
+            onChange={(e) => onUpdate({ groupId: e.target.value || null })}
+            className="flex-1 px-2 py-1.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            data-testid="select-group"
+          >
+            <option value="">{t(lang, "noGroup")}</option>
+            {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+          </select>
+        </div>
+      )}
+
+      {/* Points */}
+      <div>
+        <button
+          onClick={() => setShowPoints(!showPoints)}
+          className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+          data-testid="button-toggle-points"
+        >
+          {showPoints ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+          <Trophy className="w-3.5 h-3.5" />
+          {t(lang, "pointsSection")} {Object.keys(points).length > 0 && `(${t(lang, "pointsLabel")})`}
+        </button>
+
+        {showPoints && (
+          <div className="mt-3 space-y-2 p-3 bg-muted/40 rounded-lg">
+            {supportsOptionPoints ? (
+              <>
+                {(question.type === "yes_no" ? ["true", "false"] : options).map((opt) => (
+                  <div key={opt} className="flex items-center gap-3">
+                    <span className="text-xs text-foreground flex-1 truncate">{opt === "true" ? t(lang, "yes") : opt === "false" ? t(lang, "no") : opt}</span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={points[opt] ?? 0}
+                      onChange={(e) => updatePoints(opt, parseInt(e.target.value) || 0)}
+                      className="w-20 px-2 py-1 rounded-md border border-input bg-background text-sm text-right focus:outline-none focus:ring-1 focus:ring-ring"
+                      data-testid={`input-points-${opt}`}
+                    />
+                    <span className="text-xs text-muted-foreground">{t(lang, "pointsLabel2")}</span>
+                  </div>
+                ))}
+              </>
+            ) : (
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-foreground flex-1">{t(lang, "defaultPoints")}</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={points["__default__"] ?? 0}
+                  onChange={(e) => updatePoints("__default__", parseInt(e.target.value) || 0)}
+                  className="w-20 px-2 py-1 rounded-md border border-input bg-background text-sm text-right focus:outline-none focus:ring-1 focus:ring-ring"
+                  data-testid="input-points-default"
+                />
+                <span className="text-xs text-muted-foreground">{t(lang, "pointsLabel2")}</span>
+              </div>
+            )}
+            {Object.keys(points).length > 0 && (
+              <button onClick={clearPoints} className="text-xs text-muted-foreground hover:text-destructive mt-1">
+                {t(lang, "deleteAction")}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Conditional logic */}
       <div>
         <button
@@ -468,20 +568,27 @@ export default function FormBuilder() {
 
   const { data: form } = useGetForm(id, { query: { queryKey: getGetFormQueryKey(id) } });
   const { data: questionsData, isLoading } = useListQuestions(id, { query: { queryKey: getListQuestionsQueryKey(id) } });
+  const { data: groupsData } = useListGroups(id, { query: { queryKey: getListGroupsQueryKey(id) } });
 
   const questions = (questionsData || []) as Question[];
+  const groups = (groupsData || []) as Group[];
   const sortedQuestions = [...questions].sort((a, b) => a.order - b.order);
 
   const createQuestion = useCreateQuestion();
   const updateQuestion = useUpdateQuestion();
   const deleteQuestion = useDeleteQuestion();
   const reorderQuestions = useReorderQuestions();
+  const createGroup = useCreateGroup();
+  const updateGroup = useUpdateGroup();
+  const deleteGroup = useDeleteGroup();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [isAddQuestionDialogOpen, setIsAddQuestionDialogOpen] = useState(false);
   const [duplicatingQuestionId, setDuplicatingQuestionId] = useState<string | null>(null);
+  const [newGroupName, setNewGroupName] = useState("");
+  const [showGroupInput, setShowGroupInput] = useState(false);
 
   const selectedQuestion = sortedQuestions.find(q => q.id === selectedId) ?? null;
 
@@ -532,6 +639,38 @@ export default function FormBuilder() {
           if (selectedId === questionId) setSelectedId(null);
         },
       }
+    );
+  };
+
+  const handleAddGroup = () => {
+    if (!newGroupName.trim()) return;
+    createGroup.mutate(
+      { id, data: { name: newGroupName.trim() } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListGroupsQueryKey(id) });
+          setNewGroupName("");
+          setShowGroupInput(false);
+        },
+      }
+    );
+  };
+
+  const handleDeleteGroup = (groupId: string) => {
+    deleteGroup.mutate(
+      { formId: id, groupId },
+      { onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListGroupsQueryKey(id) });
+          queryClient.invalidateQueries({ queryKey: getListQuestionsQueryKey(id) });
+        }
+      }
+    );
+  };
+
+  const handleToggleGroupRandomize = (groupId: string, currentVal: boolean) => {
+    updateGroup.mutate(
+      { formId: id, groupId, data: { randomize: !currentVal } },
+      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListGroupsQueryKey(id) }) }
     );
   };
 
@@ -717,8 +856,68 @@ export default function FormBuilder() {
             )}
           </div>
 
+          {/* ── Groups section ───────────────────────────────── */}
+          {groups.length > 0 && (
+            <div className="border-t border-border px-3 pt-3 pb-2 space-y-1">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 mb-2 flex items-center gap-1">
+                <Layers className="w-3 h-3" /> {t(lang, "groupsSection")}
+              </p>
+              {groups.map(g => (
+                <div key={g.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-muted/40">
+                  <span className="text-xs text-foreground font-medium flex-1 truncate">{g.name}</span>
+                  <button
+                    onClick={() => handleToggleGroupRandomize(g.id, g.randomize)}
+                    title={t(lang, "groupRandomize")}
+                    className={`p-1 rounded text-xs ${g.randomize ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                    data-testid={`button-group-randomize-${g.id}`}
+                  >
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.8-1.1 2-1.7 3.3-1.7H22M18 2l4 4-4 4M18 14l4 4-4 4" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => handleDeleteGroup(g.id)}
+                    className="p-1 rounded text-muted-foreground hover:text-destructive"
+                    data-testid={`button-delete-group-${g.id}`}
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* ── Categorized question type picker ─────────────── */}
-          <div className="border-t border-border p-3">
+          <div className="border-t border-border p-3 space-y-2">
+            {showGroupInput ? (
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddGroup()}
+                  placeholder={t(lang, "groupNamePlaceholder")}
+                  className="flex-1 px-2 py-1.5 rounded-lg border border-input bg-background text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                  autoFocus
+                  data-testid="input-new-group-name"
+                />
+                <button onClick={handleAddGroup} disabled={createGroup.isPending} className="px-2 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20">
+                  {t(lang, "addBtn")}
+                </button>
+                <button onClick={() => { setShowGroupInput(false); setNewGroupName(""); }} className="px-2 py-1.5 rounded-lg text-muted-foreground hover:text-foreground text-xs">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowGroupInput(true)}
+                className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border border-dashed border-border text-xs text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+                data-testid="button-add-group"
+              >
+                <Layers className="w-3.5 h-3.5" />
+                {t(lang, "addGroup")}
+              </button>
+            )}
             <button
               onClick={() => setIsAddQuestionDialogOpen(true)}
               disabled={createQuestion.isPending}
@@ -738,6 +937,7 @@ export default function FormBuilder() {
               key={selectedQuestion.id}
               question={selectedQuestion}
               questions={sortedQuestions}
+              groups={groups}
               onUpdate={(data) => handleUpdate(selectedQuestion.id, data)}
               onDelete={() => handleDelete(selectedQuestion.id)}
               lang={lang}

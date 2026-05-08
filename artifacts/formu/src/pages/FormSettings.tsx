@@ -1,6 +1,6 @@
 import { useParams } from "wouter";
 import { useState, useEffect } from "react";
-import { Globe, Lock, RefreshCw, Trash2, Link2 } from "lucide-react";
+import { Globe, Lock, RefreshCw, Trash2, Link2, Shuffle, Trophy, Monitor } from "lucide-react";
 import {
   useGetForm, useUpdateForm, usePublishForm,
   useGetSheetIntegration, useSaveSheetIntegration, useDeleteSheetIntegration, useSyncToSheets,
@@ -48,11 +48,25 @@ export default function FormSettings() {
   const [checkingGoogleConnection, setCheckingGoogleConnection] = useState(true);
   const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
 
+  // New feature states
+  const [randomizeQuestions, setRandomizeQuestions] = useState(false);
+  const [showScore, setShowScore] = useState(false);
+  const [endScreenTitle, setEndScreenTitle] = useState("");
+  const [endScreenDescription, setEndScreenDescription] = useState("");
+  const [endScreenButtonText, setEndScreenButtonText] = useState("");
+  const [endScreenButtonUrl, setEndScreenButtonUrl] = useState("");
+
   useEffect(() => {
     if (form) {
       setTitle(form.title);
       setDescription(form.description ?? "");
       setThemeColor(form.themeColor);
+      setRandomizeQuestions(form.randomizeQuestions ?? false);
+      setShowScore(form.showScore ?? false);
+      setEndScreenTitle(form.endScreenTitle ?? "");
+      setEndScreenDescription(form.endScreenDescription ?? "");
+      setEndScreenButtonText(form.endScreenButtonText ?? "");
+      setEndScreenButtonUrl(form.endScreenButtonUrl ?? "");
     }
   }, [form]);
 
@@ -138,6 +152,50 @@ export default function FormSettings() {
     );
   };
 
+  const handleSaveRandomize = () => {
+    updateForm.mutate(
+      { id, data: { randomizeQuestions } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetFormQueryKey(id) });
+          toast({ title: t(lang, "settingsSaved") });
+        },
+      }
+    );
+  };
+
+  const handleSaveScore = () => {
+    updateForm.mutate(
+      { id, data: { showScore } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetFormQueryKey(id) });
+          toast({ title: t(lang, "settingsSaved") });
+        },
+      }
+    );
+  };
+
+  const handleSaveEndScreen = () => {
+    updateForm.mutate(
+      {
+        id,
+        data: {
+          endScreenTitle: endScreenTitle || null,
+          endScreenDescription: endScreenDescription || null,
+          endScreenButtonText: endScreenButtonText || null,
+          endScreenButtonUrl: endScreenButtonUrl || null,
+        }
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetFormQueryKey(id) });
+          toast({ title: t(lang, "settingsSaved") });
+        },
+      }
+    );
+  };
+
   const handlePublishToggle = () => {
     publishForm.mutate(
       { id, data: { published: !form?.isPublished } },
@@ -202,6 +260,26 @@ export default function FormSettings() {
     ? `${window.location.origin}${import.meta.env.BASE_URL}f/${id}`
     : "";
 
+  const inputClass = "w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring";
+  const labelClass = "text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1.5";
+  const sectionClass = "bg-card border border-card-border rounded-xl p-6";
+  const saveBtnClass = "px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60";
+
+  function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+    return (
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={`relative w-10 h-5.5 rounded-full transition-colors flex-shrink-0 ${checked ? "bg-primary" : "bg-muted"}`}
+        style={{ minWidth: 40, height: 22 }}
+      >
+        <div className={`absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-[19px]" : "translate-x-0.5"}`} style={{ width: 18, height: 18 }} />
+      </button>
+    );
+  }
+
   return (
     <FormLayout
       formId={id}
@@ -213,87 +291,43 @@ export default function FormSettings() {
         <div className="max-w-2xl mx-auto px-6 py-6 space-y-6">
 
           {/* General */}
-          <div className="bg-card border border-card-border rounded-xl p-6">
+          <div className={sectionClass}>
             <h3 className="text-sm font-semibold text-foreground mb-4">{t(lang, "general")}</h3>
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1.5">
-                  {t(lang, "formTitleLabel")}
-                </label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  data-testid="input-title"
-                />
+                <label className={labelClass}>{t(lang, "formTitleLabel")}</label>
+                <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className={inputClass} data-testid="input-title" />
               </div>
               <div>
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1.5">
-                  {t(lang, "descriptionFieldLabel")}
-                </label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-                  data-testid="input-description"
-                />
+                <label className={labelClass}>{t(lang, "descriptionFieldLabel")}</label>
+                <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={`${inputClass} resize-none`} data-testid="input-description" />
               </div>
               <div>
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">
-                  {t(lang, "themeColor")}
-                </label>
+                <label className={labelClass}>{t(lang, "themeColor")}</label>
                 <div className="flex items-center gap-2 flex-wrap">
                   {PRESET_COLORS.map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => setThemeColor(color)}
+                    <button key={color} onClick={() => setThemeColor(color)}
                       className={`w-7 h-7 rounded-full transition-all ${themeColor === color ? "ring-2 ring-offset-2 ring-foreground scale-110" : "hover:scale-105"}`}
-                      style={{ backgroundColor: color }}
-                      data-testid={`color-${color}`}
-                    />
+                      style={{ backgroundColor: color }} data-testid={`color-${color}`} />
                   ))}
                   <div className="flex items-center gap-2 ml-2">
-                    <input
-                      type="color"
-                      value={themeColor}
-                      onChange={(e) => setThemeColor(e.target.value)}
-                      className="w-7 h-7 rounded-full cursor-pointer border-none p-0"
-                      data-testid="input-color-custom"
-                    />
-                    <input
-                      type="text"
-                      value={themeColor}
-                      onChange={(e) => setThemeColor(e.target.value)}
-                      className="w-24 px-2 py-1 rounded-md border border-input bg-background text-xs font-mono focus:outline-none focus:ring-1 focus:ring-ring"
-                      data-testid="input-color-hex"
-                    />
+                    <input type="color" value={themeColor} onChange={(e) => setThemeColor(e.target.value)} className="w-7 h-7 rounded-full cursor-pointer border-none p-0" data-testid="input-color-custom" />
+                    <input type="text" value={themeColor} onChange={(e) => setThemeColor(e.target.value)} className="w-24 px-2 py-1 rounded-md border border-input bg-background text-xs font-mono focus:outline-none focus:ring-1 focus:ring-ring" data-testid="input-color-hex" />
                   </div>
                 </div>
               </div>
-
-              <button
-                onClick={handleSaveGeneral}
-                disabled={updateForm.isPending}
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60"
-                data-testid="button-save-general"
-              >
+              <button onClick={handleSaveGeneral} disabled={updateForm.isPending} className={saveBtnClass} data-testid="button-save-general">
                 {updateForm.isPending ? t(lang, "saving") : t(lang, "saveChanges")}
               </button>
             </div>
           </div>
 
           {/* Publish */}
-          <div className="bg-card border border-card-border rounded-xl p-6">
+          <div className={sectionClass}>
             <h3 className="text-sm font-semibold text-foreground mb-4">{t(lang, "publishSection")}</h3>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                {form?.isPublished ? (
-                  <Globe className="w-5 h-5 text-green-500" />
-                ) : (
-                  <Lock className="w-5 h-5 text-muted-foreground" />
-                )}
+                {form?.isPublished ? <Globe className="w-5 h-5 text-green-500" /> : <Lock className="w-5 h-5 text-muted-foreground" />}
                 <div>
                   <p className="text-sm font-medium text-foreground">
                     {form?.isPublished ? t(lang, "publishedStatus") : t(lang, "unpublishedStatus")}
@@ -306,35 +340,102 @@ export default function FormSettings() {
               <button
                 onClick={handlePublishToggle}
                 disabled={publishForm.isPending}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60 ${
-                  form?.isPublished
-                    ? "border border-border text-foreground hover:bg-muted"
-                    : "bg-green-600 text-white hover:bg-green-700"
-                }`}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60 ${form?.isPublished ? "border border-border text-foreground hover:bg-muted" : "bg-green-600 text-white hover:bg-green-700"}`}
                 data-testid="button-publish-toggle"
               >
                 {publishForm.isPending ? "..." : form?.isPublished ? t(lang, "unpublish") : t(lang, "publishBtn")}
               </button>
             </div>
-
             {form?.isPublished && (
               <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
                 <Link2 className="w-4 h-4 text-muted-foreground shrink-0" />
                 <span className="text-xs text-foreground font-mono flex-1 truncate">{formLink}</span>
-                <button
-                  onClick={() => { navigator.clipboard.writeText(formLink); toast({ title: t(lang, "linkCopied") }); }}
-                  className="text-xs text-primary hover:underline shrink-0"
-                  data-testid="button-copy-link"
-                >
+                <button onClick={() => { navigator.clipboard.writeText(formLink); toast({ title: t(lang, "linkCopied") }); }} className="text-xs text-primary hover:underline shrink-0" data-testid="button-copy-link">
                   {t(lang, "copy")}
                 </button>
               </div>
             )}
           </div>
 
+          {/* Randomize */}
+          <div className={sectionClass}>
+            <div className="flex items-center gap-2 mb-4">
+              <Shuffle className="w-4 h-4 text-muted-foreground" />
+              <h3 className="text-sm font-semibold text-foreground">{t(lang, "randomizeSection")}</h3>
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <Toggle checked={randomizeQuestions} onChange={setRandomizeQuestions} />
+                <div>
+                  <p className="text-sm font-medium text-foreground">{t(lang, "randomizeLabel")}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t(lang, "randomizeHint")}</p>
+                </div>
+              </div>
+              <button onClick={handleSaveRandomize} disabled={updateForm.isPending} className={saveBtnClass} data-testid="button-save-randomize">
+                {updateForm.isPending ? t(lang, "saving") : t(lang, "saveChanges")}
+              </button>
+            </div>
+          </div>
+
+          {/* Point Score */}
+          <div className={sectionClass}>
+            <div className="flex items-center gap-2 mb-4">
+              <Trophy className="w-4 h-4 text-muted-foreground" />
+              <h3 className="text-sm font-semibold text-foreground">{t(lang, "pointsSection")}</h3>
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <Toggle checked={showScore} onChange={setShowScore} />
+                <div>
+                  <p className="text-sm font-medium text-foreground">{t(lang, "showScoreLabel")}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t(lang, "pointsHint")}</p>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground bg-muted/40 px-3 py-2 rounded-lg">
+                {lang === "id"
+                  ? "Aktifkan poin pada setiap pertanyaan di tab Build untuk memberi nilai pada jawaban."
+                  : "Enable points on each question in the Build tab to score answers."}
+              </p>
+              <button onClick={handleSaveScore} disabled={updateForm.isPending} className={saveBtnClass} data-testid="button-save-score">
+                {updateForm.isPending ? t(lang, "saving") : t(lang, "saveChanges")}
+              </button>
+            </div>
+          </div>
+
+          {/* End Screen */}
+          <div className={sectionClass}>
+            <div className="flex items-center gap-2 mb-4">
+              <Monitor className="w-4 h-4 text-muted-foreground" />
+              <h3 className="text-sm font-semibold text-foreground">{t(lang, "endScreenSection")}</h3>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className={labelClass}>{t(lang, "endScreenTitle")}</label>
+                <input type="text" value={endScreenTitle} onChange={(e) => setEndScreenTitle(e.target.value)} placeholder={t(lang, "endScreenTitlePlaceholder")} className={inputClass} data-testid="input-end-screen-title" />
+              </div>
+              <div>
+                <label className={labelClass}>{t(lang, "endScreenDescription")}</label>
+                <textarea value={endScreenDescription} onChange={(e) => setEndScreenDescription(e.target.value)} placeholder={t(lang, "endScreenDescPlaceholder")} rows={3} className={`${inputClass} resize-none`} data-testid="input-end-screen-desc" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelClass}>{t(lang, "endScreenButtonText")}</label>
+                  <input type="text" value={endScreenButtonText} onChange={(e) => setEndScreenButtonText(e.target.value)} placeholder={t(lang, "endScreenBtnTextPlaceholder")} className={inputClass} data-testid="input-end-screen-btn-text" />
+                </div>
+                <div>
+                  <label className={labelClass}>{t(lang, "endScreenButtonUrl")}</label>
+                  <input type="url" value={endScreenButtonUrl} onChange={(e) => setEndScreenButtonUrl(e.target.value)} placeholder={t(lang, "endScreenBtnUrlPlaceholder")} className={inputClass} data-testid="input-end-screen-btn-url" />
+                </div>
+              </div>
+              <button onClick={handleSaveEndScreen} disabled={updateForm.isPending} className={saveBtnClass} data-testid="button-save-end-screen">
+                {updateForm.isPending ? t(lang, "saving") : t(lang, "saveChanges")}
+              </button>
+            </div>
+          </div>
+
           {/* Google Sheets */}
           {enableGoogleSheetsIntegration && (
-            <div className="bg-card border border-card-border rounded-xl p-6">
+            <div className={sectionClass}>
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-5 h-5 flex items-center justify-center">
                   <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none">
@@ -355,65 +456,26 @@ export default function FormSettings() {
                       <p className="text-xs text-muted-foreground mt-0.5">{t(lang, "googleConnectionNeeded")}</p>
                     )}
                   </div>
-                  <button
-                    onClick={handleConnectGoogle}
-                    disabled={isConnectingGoogle || checkingGoogleConnection}
-                    className="px-3.5 py-2 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-60"
-                    data-testid="button-connect-google"
-                  >
+                  <button onClick={handleConnectGoogle} disabled={isConnectingGoogle || checkingGoogleConnection} className="px-3.5 py-2 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-60" data-testid="button-connect-google">
                     {isConnectingGoogle ? t(lang, "saving") : t(lang, "connectGoogleSheets")}
                   </button>
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1.5">
-                    {t(lang, "spreadsheetIdLabel")}
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"
-                    value={spreadsheetId}
-                    onChange={(e) => setSpreadsheetId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring"
-                    data-testid="input-spreadsheet-id"
-                  />
+                  <label className={labelClass}>{t(lang, "spreadsheetIdLabel")}</label>
+                  <input type="text" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" value={spreadsheetId} onChange={(e) => setSpreadsheetId(e.target.value)} className={`${inputClass} font-mono`} data-testid="input-spreadsheet-id" />
                   <p className="text-xs text-muted-foreground mt-1">{t(lang, "spreadsheetIdHint")}</p>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1.5">
-                    {t(lang, "spreadsheetNameLabel")}
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="My Form Responses"
-                    value={spreadsheetName}
-                    onChange={(e) => setSpreadsheetName(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    data-testid="input-spreadsheet-name"
-                  />
+                  <label className={labelClass}>{t(lang, "spreadsheetNameLabel")}</label>
+                  <input type="text" placeholder="My Form Responses" value={spreadsheetName} onChange={(e) => setSpreadsheetName(e.target.value)} className={inputClass} data-testid="input-spreadsheet-name" />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1.5">
-                    {t(lang, "sheetNameLabel")}
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Form Responses"
-                    value={sheetName}
-                    onChange={(e) => setSheetName(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    data-testid="input-sheet-name"
-                  />
+                  <label className={labelClass}>{t(lang, "sheetNameLabel")}</label>
+                  <input type="text" placeholder="Form Responses" value={sheetName} onChange={(e) => setSheetName(e.target.value)} className={inputClass} data-testid="input-sheet-name" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="sheet-enabled"
-                    checked={sheetEnabled}
-                    onChange={(e) => setSheetEnabled(e.target.checked)}
-                    className="rounded border-input"
-                    data-testid="checkbox-sheet-enabled"
-                  />
+                  <input type="checkbox" id="sheet-enabled" checked={sheetEnabled} onChange={(e) => setSheetEnabled(e.target.checked)} className="rounded border-input" data-testid="checkbox-sheet-enabled" />
                   <label htmlFor="sheet-enabled" className="text-sm text-foreground">{t(lang, "enableAutoSync")}</label>
                 </div>
 
@@ -424,31 +486,16 @@ export default function FormSettings() {
                 )}
 
                 <div className="flex items-center gap-2 pt-2">
-                  <button
-                    onClick={handleSaveSheet}
-                    disabled={saveSheet.isPending}
-                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60"
-                    data-testid="button-save-sheet"
-                  >
+                  <button onClick={handleSaveSheet} disabled={saveSheet.isPending} className={saveBtnClass} data-testid="button-save-sheet">
                     {saveSheet.isPending ? t(lang, "saving") : t(lang, "saveIntegration")}
                   </button>
                   {sheetIntegration && (
                     <>
-                      <button
-                        onClick={handleSync}
-                        disabled={syncSheets.isPending || !googleConnected}
-                        className="flex items-center gap-1.5 px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-muted transition-colors disabled:opacity-60"
-                        data-testid="button-sync-now"
-                      >
+                      <button onClick={handleSync} disabled={syncSheets.isPending || !googleConnected} className="flex items-center gap-1.5 px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-muted transition-colors disabled:opacity-60" data-testid="button-sync-now">
                         <RefreshCw className={`w-3.5 h-3.5 ${syncSheets.isPending ? "animate-spin" : ""}`} />
                         {syncSheets.isPending ? t(lang, "syncing") : t(lang, "syncNow")}
                       </button>
-                      <button
-                        onClick={handleRemoveSheet}
-                        disabled={deleteSheet.isPending}
-                        className="flex items-center gap-1.5 px-4 py-2 border border-destructive/30 text-destructive rounded-lg text-sm font-medium hover:bg-destructive/10 transition-colors disabled:opacity-60"
-                        data-testid="button-remove-sheet"
-                      >
+                      <button onClick={handleRemoveSheet} disabled={deleteSheet.isPending} className="flex items-center gap-1.5 px-4 py-2 border border-destructive/30 text-destructive rounded-lg text-sm font-medium hover:bg-destructive/10 transition-colors disabled:opacity-60" data-testid="button-remove-sheet">
                         <Trash2 className="w-3.5 h-3.5" />
                         {t(lang, "remove")}
                       </button>
